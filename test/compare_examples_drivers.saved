@@ -1,0 +1,164 @@
+# Begin Test 0 -- here we run a comparison of ex-02 and drive-02.  The first three tests compare drive-02, ex-02 and ex-02-serial, making sure that all three versions have the same discretization error when run to a very small tolerance.  
+  
+  my_Access():  Braid iter 9,  discr. error at final time:  4.2283e-03
+
+# Begin Test 1
+
+  my_Access():  Braid iter 9,  discr. error at final time:  4.2283e-03
+
+# Begin Test 2
+
+  Discr. error at final time:   4.2283e-03
+
+# Begin Test 3 -- All subsequent tests check the discretization error after only 2 iterations, so that we can test various XBraid options.  This way the printed discretization error is printed before convergence and hence `unique' to this particular option combination.
+  
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8328e-03
+
+# Begin Test 4
+
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8328e-03
+
+# Begin Test 5
+
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8634e-03
+
+# Begin Test 6
+
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8634e-03
+
+# Begin Test 7
+
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8588e-03
+
+# Begin Test 8
+
+  my_Access():  Braid iter 2,  discr. error at final time:  9.8588e-03
+
+# Begin Test 9
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0127e-02
+
+# Begin Test 10
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0127e-02
+
+# Begin Test 11
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.3734e-02
+
+# Begin Test 12
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.3734e-02
+
+# Begin Test 13
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.9203e-03
+
+# Begin Test 14
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.9203e-03
+
+# Begin Test 15
+
+  my_Access():  Braid iter 2,  discr. error at final time:  6.0854e-03
+
+# Begin Test 16
+
+  my_Access():  Braid iter 2,  discr. error at final time:  6.0854e-03
+
+# Begin Test 17
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7629e-03
+
+# Begin Test 18
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7629e-03
+
+# Begin Test 19
+
+  my_Access():  Braid iter 2,  discr. error at final time:  5.4690e-03
+
+# Begin Test 20
+
+  my_Access():  Braid iter 2,  discr. error at final time:  5.4690e-03
+
+# Begin Test 21
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0063e-02
+
+# Begin Test 22
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0063e-02
+
+# Begin Test 23
+
+  my_Access():  Braid iter 3,  discr. error at final time:  4.7980e-03
+
+# Begin Test 24
+
+  my_Access():  Braid iter 3,  discr. error at final time:  4.7980e-03
+
+# Begin Test 25
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0063e-02
+
+# Begin Test 26
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0063e-02
+
+# Begin Test 27
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+
+# Begin Test 28
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+
+# Begin Test 29
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+
+# Begin Test 30
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+
+# Begin Test 31
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0599e-02
+
+# Begin Test 32
+
+  my_Access():  Braid iter 2,  discr. error at final time:  1.0599e-02
+
+# Begin Test 33
+
+  my_Access():  Braid iter 2,  discr. error at final time:  8.9867e-03
+
+# Begin Test 34
+
+  my_Access():  Braid iter 2,  discr. error at final time:  8.9867e-03
+
+# Begin Test 35
+
+  my_Access():  Braid iter 2,  discr. error at final time:  3.6568e-03
+
+# Begin Test 36
+
+  my_Access():  Braid iter 2,  discr. error at final time:  3.6568e-03
+
+# Begin Test 37
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.8938e-03
+
+# Begin Test 38
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.8938e-03
+
+# Begin Test 39
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+
+# Begin Test 40
+
+  my_Access():  Braid iter 2,  discr. error at final time:  4.7462e-03
+  
