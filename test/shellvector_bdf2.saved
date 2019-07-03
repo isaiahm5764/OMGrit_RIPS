@@ -1,0 +1,29 @@
+# Begin Test 0
+
+  time steps = 50
+  iterations            = 4
+  residual norm         = 6.064817e-06
+  number of levels      = 2
+
+# Begin Test 1
+
+  time steps = 50
+  iterations            = 7
+  residual norm         = 4.729810e-11
+  number of levels      = 2
+
+# Begin Test 2
+
+  time steps = 5000
+  iterations            = 2
+  residual norm         = 4.974946e-06
+  number of levels      = 2
+
+# Begin Test 3
+
+  time steps = 5000
+  iterations            = 3
+  residual norm         = 3.276738e-11
+  number of levels      = 2
+
+

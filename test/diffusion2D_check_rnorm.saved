@@ -1,0 +1,212 @@
+# Begin Test 0
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 1
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 2
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 3
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 4
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 5
+
+  residual norm        = 2.146943e-02
+                        --> 2-norm TemporalNorm 
+
+# Begin Test 6 -- Next test battery 
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 7
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 8
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 9
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 10
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+                        
+# Begin Test 11
+
+  residual norm        = 1.066077e-02
+                        --> 2-norm TemporalNorm 
+
+# Begin Test 12 -- Next test battery
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 13
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 14
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 15
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 16
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 17
+
+  residual norm        = 4.078268e-01
+                        --> 1-norm TemporalNorm 
+
+# Begin Test 18 -- next test battery
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 19
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 20
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 21
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 22
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 23
+
+  residual norm        = 3.885386e-01
+                        --> Inf-norm TemporalNorm 
+
+# Begin Test 24 -- next test battery 
+
+  residual norm         = 0.000000e+00
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 25
+
+  residual norm         = 0.000000e+00
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 26
+
+  residual norm         = 0.000000e+00
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 27 -- Use Skip 1
+
+  residual norm         = 4.234270e-02
+                         --> 2-norm TemporalNorm 
+# Begin Test 28
+
+  residual norm         = 4.234270e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 29
+
+  residual norm         = 4.234270e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 30
+
+  residual norm         = 4.234270e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 31
+
+  residual norm         = 4.234270e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 32 -- Use user residual routine
+
+  residual norm         = 4.427659e-02
+                         --> 2-norm TemporalNorm 
+# Begin Test 33
+
+  residual norm         = 4.427659e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 34
+
+  residual norm         = 4.427659e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 35
+
+  residual norm         = 4.427659e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 36
+
+  residual norm         = 4.427659e-02
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 37 -- Use full residual with user routine
+
+  Braid: Full || r_1 || = 4.427659e-02, conv factor = 1.00e+00
+  residual norm         = 3.552895e-04
+                         --> 2-norm TemporalNorm 
+# Begin Test 38
+
+  Braid: Full || r_1 || = 4.427659e-02, conv factor = 1.00e+00
+  residual norm         = 3.552895e-04
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 39
+
+  Braid: Full || r_1 || = 4.427659e-02, conv factor = 1.00e+00
+  residual norm         = 3.552895e-04
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 40
+
+  Braid: Full || r_1 || = 4.427659e-02, conv factor = 1.00e+00
+  residual norm         = 3.552895e-04
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 41
+
+  Braid: Full || r_1 || = 4.427659e-02, conv factor = 1.00e+00
+  residual norm         = 3.552895e-04
+                         --> 2-norm TemporalNorm 
+

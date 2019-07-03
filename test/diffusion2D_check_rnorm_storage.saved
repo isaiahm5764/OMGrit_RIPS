@@ -1,0 +1,118 @@
+# Begin Test 0 -- Begin storage = -1 tests
+
+  residual norm         = 1.360860e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 1
+
+  residual norm         = 1.360860e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 2
+
+  residual norm         = 1.360860e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 3
+
+  residual norm         = 1.239259e-10
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 4
+
+  residual norm         = 1.239259e-10
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 5
+
+  residual norm         = 1.239259e-10
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 6
+
+  residual norm         = 7.816896e-11
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 9
+
+  residual norm         = 2.812678e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 10
+
+  residual norm         = 2.812678e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 11
+
+  residual norm         = 2.812678e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 12 -- Begin storage = 0 tests
+
+  residual norm         = 1.344434e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 13
+
+  residual norm         = 1.344434e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 14
+
+  residual norm         = 1.344434e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 18
+
+  residual norm         = 2.856378e-10
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 19
+
+  residual norm         = 2.856376e-10
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 21
+
+  residual norm         = 2.440768e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 22
+
+  residual norm         = 2.440768e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 23
+
+  residual norm         = 2.440768e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 24 -- Begin storage = 1 tests
+  residual norm         = 1.361100e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 25
+
+  residual norm         = 1.361100e-08
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 26
+
+  residual norm         = 1.361100e-08
+                         --> 2-norm TemporalNorm 
+# Begin Test 33
+
+  residual norm         = 2.329103e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 34
+
+  residual norm         = 2.329103e-09
+                         --> 2-norm TemporalNorm 
+
+# Begin Test 35
+
+  residual norm         = 2.329103e-09
+                         --> 2-norm TemporalNorm 
+
