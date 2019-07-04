@@ -246,6 +246,7 @@ my_TriResidual(braid_App       app,
    double  gamma = (app->gamma);
    double *rtmp, *utmp;
    int     level, index;
+   int     mspace = (app->mspace);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -262,52 +263,52 @@ my_TriResidual(braid_App       app,
    }
 
    /* Create temporary vectors */
-   vec_create(2, &rtmp);
-   vec_create(2, &utmp);
+   vec_create(mspace, &rtmp);
+   vec_create(mspace, &utmp);
 
    /* Compute action of center block */
 
    /* rtmp = U_i^{-1} u */
-   vec_copy(2, (r->values), utmp);
+   vec_copy(mspace, (r->values), utmp);
    apply_Uinv(dt, utmp);
-   vec_copy(2, utmp, rtmp);
+   vec_copy(mspace, utmp, rtmp);
 
    /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
-   vec_copy(2, (r->values), utmp);
+   vec_copy(mspace, (r->values), utmp);
    apply_DAdjoint(dt, utmp, utmp);
    apply_Vinv(dt, gamma, utmp);
    apply_D(dt, utmp, utmp);
-   vec_axpy(2, 1.0, utmp, rtmp);
+   vec_axpy(mspace, 1.0, utmp, rtmp);
 
    /* rtmp = rtmp + Phi_i U_{i-1}^{-1} Phi_i^T u */
    /* This term is zero at time 0, since Phi_0 = 0 */
    if (uleft != NULL)
    {
-      vec_copy(2, (r->values), utmp);
+      vec_copy(mspace, (r->values), utmp);
       apply_PhiAdjoint(dt, utmp);
       apply_Uinv(dt, utmp);
       apply_Phi(dt, utmp);
-      vec_axpy(2, 1.0, utmp, rtmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
    /* Compute action of west block */
    if (uleft != NULL)
    {
       /* rtmp = rtmp - Phi_i U_{i-1}^{-1} uleft */
-      vec_copy(2, (uleft->values), utmp);
+      vec_copy(mspace, (uleft->values), utmp);
       apply_Uinv(dt, utmp);
       apply_Phi(dt, utmp);
-      vec_axpy(2, -1.0, utmp, rtmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp);
    }
    
    /* Compute action of east block */
    if (uright != NULL)
    {
       /* rtmp = rtmp - U_i^{-1} Phi_{i+1}^T uright */
-      vec_copy(2, (uright->values), utmp);
+      vec_copy(mspace, (uright->values), utmp);
       apply_PhiAdjoint(dt, utmp);
       apply_Uinv(dt, utmp);
-      vec_axpy(2, -1.0, utmp, rtmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
    /* Subtract rhs gbar (add g) in non-homogeneous case */
@@ -315,20 +316,20 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp + g; g = Phi_0 u_0 */
       utmp[0] =  0.0;
-      utmp[1] = -1.0;
+      utmp[mspace-1] = 0.0;
       apply_Phi(dt, utmp);
-      vec_axpy(2, 1.0, utmp, rtmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
    /* Subtract rhs f */
    if (f != NULL)
    {
       /* rtmp = rtmp - f */
-      vec_axpy(2, -1.0, (f->values), rtmp);
+      vec_axpy(mspace, -1.0, (f->values), rtmp);
    }
    
    /* Copy temporary residual vector into residual */
-   vec_copy(2, rtmp, (r->values));
+   vec_copy(mspace, rtmp, (r->values));
    
    /* Destroy temporary vectors */
    vec_destroy(rtmp);
@@ -353,6 +354,7 @@ my_TriSolve(braid_App       app,
    double  t, tprev, tnext, dt;
    double  gamma = (app->gamma);
    double *utmp, *rtmp;
+   int mspace = (app->mspace)
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -366,10 +368,10 @@ my_TriSolve(braid_App       app,
    }
 
    /* Create temporary vector */
-   vec_create(2, &utmp);
+   vec_create(mspace, &utmp);
 
    /* Initialize temporary solution vector */
-   vec_copy(2, (u->values), utmp);
+   vec_copy(mspace, (u->values), utmp);
    
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
@@ -379,6 +381,9 @@ my_TriSolve(braid_App       app,
     * Using \tilde{C} = | 1/dt            0             |
     *                   |  0    ( 1/dt + dt/(2*gamma) ) |
     */
+
+   /* JTODO: update lines below for general u vectors  */
+
    rtmp = (u->values);
    if (uleft != NULL)
    {
@@ -393,7 +398,7 @@ my_TriSolve(braid_App       app,
    }
 
    /* Complete residual update */
-   vec_axpy(2, 1.0, utmp, (u->values));
+   vec_axpy(mspace, 1.0, utmp, (u->values));
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
@@ -414,7 +419,7 @@ my_Init(braid_App     app,
 
    /* Allocate the vector */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(2, &(u->values));
+   vec_create(, &(u->values));
 
    u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
    u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
@@ -614,7 +619,7 @@ main(int argc, char *argv[])
    my_App     *app;
          
    double      tstart, tstop, dt; 
-   int         rank, ntime, arg_index;
+   int         rank, ntime, mspace, arg_index;
    double      gamma;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
@@ -623,6 +628,9 @@ main(int argc, char *argv[])
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+   /* Define space domain */
+   mspace = 20;
 
    /* Define time domain */
    ntime  = 20;              /* Total number of time-steps */
@@ -655,6 +663,7 @@ main(int argc, char *argv[])
          printf("  s.t.  d/dt u_1(t) = u_2(t) \n");
          printf("        d/dt u_2(t) = -u_2(t) + c(t) \n\n");
          printf("  -ntime <ntime>          : Num points in time\n");
+         printf("  -mspace <mspace>        : Num points in space\n");
          printf("  -gamma <gamma>          : Relaxation parameter in the objective function \n");
          printf("  -ml <max_levels>        : Max number of braid levels \n");
          printf("  -nu  <nrelax>           : Num F-C relaxations\n");
@@ -670,6 +679,11 @@ main(int argc, char *argv[])
       {
          arg_index++;
          ntime = atoi(argv[arg_index++]);
+      }
+      else if ( strcmp(argv[arg_index], "-mspace") == 0 )
+      {
+         arg_index++;
+         mspace = atoi(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-gamma") == 0 )
       {
@@ -731,6 +745,7 @@ main(int argc, char *argv[])
    app = (my_App *) malloc(sizeof(my_App));
    app->myid     = rank;
    app->ntime    = ntime;
+   app->mspace   = mspace;
    app->gamma    = gamma;
    app->w        = NULL;
 
