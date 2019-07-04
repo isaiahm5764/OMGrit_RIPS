@@ -243,7 +243,8 @@ my_TriResidual(braid_App       app,
                braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
-   double  gamma = (app->gamma);
+   double  nu = (app->nu);
+	 double  alpha = (app->alpha);
    double *rtmp, *utmp;
    int     level, index;
    int     mspace = (app->mspace);
@@ -270,14 +271,14 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = U_i^{-1} u */
    vec_copy(mspace, (r->values), utmp);
-   apply_Uinv(dt, utmp);
+   apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
    /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
    vec_copy(mspace, (r->values), utmp);
-   apply_DAdjoint(dt, utmp, utmp);
-   apply_Vinv(dt, gamma, utmp);
-   apply_D(dt, utmp, utmp);
+   apply_DAdjoint(dt, mspace, utmp);
+   apply_Vinv(dt, dx, alpha, mspace, utmp);
+   apply_D(dt, mspace, utmp);
    vec_axpy(mspace, 1.0, utmp, rtmp);
 
    /* rtmp = rtmp + Phi_i U_{i-1}^{-1} Phi_i^T u */
@@ -285,9 +286,9 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (r->values), utmp);
-      apply_PhiAdjoint(dt, utmp);
-      apply_Uinv(dt, utmp);
-      apply_Phi(dt, utmp);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
@@ -296,8 +297,8 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp - Phi_i U_{i-1}^{-1} uleft */
       vec_copy(mspace, (uleft->values), utmp);
-      apply_Uinv(dt, utmp);
-      apply_Phi(dt, utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
    
@@ -306,8 +307,8 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp - U_i^{-1} Phi_{i+1}^T uright */
       vec_copy(mspace, (uright->values), utmp);
-      apply_PhiAdjoint(dt, utmp);
-      apply_Uinv(dt, utmp);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
@@ -315,9 +316,10 @@ my_TriResidual(braid_App       app,
    if ((!homogeneous) && (index == 0))
    {
       /* rtmp = rtmp + g; g = Phi_0 u_0 */
+			/* utmp[0]=*/
       utmp[0] =  0.0;
       utmp[mspace-1] = 0.0;
-      apply_Phi(dt, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
