@@ -247,7 +247,7 @@ my_TriResidual(braid_App       app,
 {
    double  t, tprev, tnext, dt, dx;
    double  nu = (app->nu);
-	 double  alpha = (app->alpha);
+	double  alpha = (app->alpha);
    double *rtmp, *utmp;
    int     level, index;
    int     mspace = (app->mspace);
@@ -267,7 +267,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = dx/(mspace+2);
+   dx = 1/(mspace+1);
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
@@ -319,7 +319,6 @@ my_TriResidual(braid_App       app,
    }
 
    /* Subtract rhs gbar (add g) in non-homogeneous case */
-   /* This will also checks if*/
    if ((!homogeneous) && (index == 0))
    {
       /* rtmp = rtmp + g; g = Phi_0 U^0 */
@@ -367,7 +366,8 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
-            braid_TriStatus status)
+            braid_TriStatus status
+            braid_Vector    u0)
 {
    double  t, tprev, tnext, dt;
    double *utmp, *rtmp;
@@ -391,28 +391,34 @@ my_TriSolve(braid_App       app,
    vec_copy(mspace, (u->values), utmp);
    
    /* Compute residual */
-   my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
+   my_TriResidual(app, uleft, uright, f, u, homogeneous, status, u0);
 
    /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
     *
-    * Using \tilde{C} = | 1/dt            0             |
-    *                   |  0    ( 1/dt + dt/(2*gamma) ) |
+    * Using [\tilde{C_i}] = [ (2/dx*dt + dt/alpha*dx)*I_M ]
+    * If we are looking at r_1, we can use the exact value of [C_[1]]=[(1+dt^2/alpha)*I_M]
     */
 
-   /* JTODO: update lines below for general u vectors  */
-
+   
    rtmp = (u->values);
    if (uleft != NULL)
    {
-      rtmp[0] = -rtmp[0]*dt;
-      rtmp[1] = -rtmp[1]/(1/dt + dt/(2*gamma));
+      for(int i = 0; i<=mspace-1; i++)
+      {
+         rtmp[i]=-rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
+      }
    }
    else
    {
       /* At the leftmost point, use a different center coefficient approximation */
-      rtmp[0] = -rtmp[0]*(2*dt);
-      rtmp[1] = -rtmp[1]/(1/(2*dt) + dt/(2*gamma));
+      for(int i = 0; i<=mspace-1; i++)
+      {
+         rtmp[i]=-rtmp[i]/( 1 + dt*dt/alpha );
+      }
    }
+
+
+
 
    /* Complete residual update */
    vec_axpy(mspace, 1.0, utmp, (u->values));
