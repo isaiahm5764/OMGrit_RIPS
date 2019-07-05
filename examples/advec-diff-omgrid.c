@@ -48,7 +48,7 @@
 
 #include "braid.h"
 #include "braid_test.h"
-
+#define PI 3.14159265
 /*--------------------------------------------------------------------------
  * My App and Vector structures
  *--------------------------------------------------------------------------*/
@@ -59,11 +59,11 @@ typedef struct _braid_App_struct
    double   alpha;       /* Relaxation parameter for objective function, v(x,t) */
    double   nu;          /* Diffusion coefficent, which we take to be large */
    int      ntime;       /* Total number of time-steps (starting at time 0) */
-   int      mspace;      /* Number of space points included in our state vector 
+   int      mspace;      /* Number of space points included in our state vector */
                          /* So including boundaries we have M+2 space points */
 
    double **w;           /* Adjoint vectors at each time point on my proc */
-   double **U0;
+   double *U0;
 
 } my_App;
 
@@ -251,7 +251,7 @@ my_TriResidual(braid_App       app,
    double *rtmp, *utmp;
    int     level, index;
    int     mspace = (app->mspace);
-   double u0 = (app->u0);
+   double *u0 = (app->U0);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -367,13 +367,14 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
-            braid_TriStatus status,
+            braid_TriStatus status
             )
 {
-   double  t, tprev, tnext, dt;
+   double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
-   double u0 = (app->u0);
+   double *u0 = (app->U0);
+   double alpha = (app->alpha);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -386,6 +387,10 @@ my_TriSolve(braid_App       app,
       dt = t - tprev;
    }
 
+   /* Get the space-step size */
+   dx = 1/(mspace+1);
+
+
    /* Create temporary vector */
    vec_create(mspace, &utmp);
 
@@ -393,7 +398,7 @@ my_TriSolve(braid_App       app,
    vec_copy(mspace, (u->values), utmp);
    
    /* Compute residual */
-   my_TriResidual(app, uleft, uright, f, u, homogeneous, status, u0);
+   my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
    /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
     *
@@ -642,10 +647,11 @@ my_BufUnpack(braid_App           app,
 int
 main(int argc, char *argv[])
 {
+
    braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt; 
+   double      tstart, tstop, dt, dx; 
    int         rank, ntime, mspace, arg_index;
    double      alpha, nu;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
@@ -790,8 +796,13 @@ main(int argc, char *argv[])
    app->nu       = nu;
    app->alpha    = alpha;
    app->w        = NULL;
-   /* Set this to whatever u0 is */
-   app->U0       = NULL;
+
+   /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
+   double *U0 = (double*) malloc( ntime*sizeof(double) );
+   for(int i=0; i<ntime; i++){
+      U0[i]=cos(2*PI * (i/ntime));
+   }
+   app->U0       = U0;
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
@@ -815,6 +826,8 @@ main(int argc, char *argv[])
 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
+
+   dx = 1/(mspace+1);
 
    if (access_level > 0)
    {
@@ -859,11 +872,11 @@ main(int argc, char *argv[])
             }
             else
             {
-               vec_copy(myspace, w[i], u);
-               vec_scale(myspace, -1.0, u);
+               vec_copy(mspace, w[i], u);
+               vec_scale(mspace, -1.0, u);
             }
             apply_Uinv(dt, dx, mspace, u);
-            vec_axpy(myspace, -1.0, U0, u)
+            vec_axpy(mspace, -1.0, U0, u);
 
             fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), u[0], u[1]);
          }
@@ -873,7 +886,7 @@ main(int argc, char *argv[])
       }
 
       /* Compute control v from adjoint w and print to file */
-      /* V = (1/(alpha*)) */
+      /* V = (1/(alpha*dx))*aW */
       {
          char    filename[255];
          FILE   *file;
@@ -887,9 +900,7 @@ main(int argc, char *argv[])
          {
             double **w = (app->w);
 
-            apply_DAdjoint(dt, w[i], v);
-            vec_scale(1, -1.0, v);
-            apply_Vinv(dt, (app->gamma), v);
+            vec_axpy(mspace, 1/(alpha*dx),w[i],v );
 
             fprintf(file, "%05d: % 1.14e\n", (i+1), v[0]);
          }
