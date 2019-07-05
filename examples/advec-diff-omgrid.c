@@ -367,8 +367,12 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
+<<<<<<< HEAD
             braid_TriStatus status
             )
+=======
+            braid_TriStatus status)
+>>>>>>> 492fe1f66083ed423d2430697325b01cda1ab748
 {
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
@@ -446,13 +450,16 @@ my_Init(braid_App     app,
         braid_Vector *u_ptr)
 {
    my_Vector *u;
-   int mspace = (app->mspace); 
+   int mspace = (app->mspace);
+
    /* Allocate the vector */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(mspace+2, &(u->values));
+   vec_create(, &(u->values));
 
-   u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
-   u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
+   for (int i = 0; i <= mspace-1; i++)
+   {
+      u->values[i] = ((double)braid_Rand())/braid_RAND_MAX;
+   }
 
    *u_ptr = u;
 
@@ -466,15 +473,18 @@ my_Clone(braid_App     app,
          braid_Vector  u,
          braid_Vector *v_ptr)
 {
+   int mspace = (app->mspace);
    my_Vector *v;
-   int mspace = (app->mspace); 
+
    /* Allocate the vector */
    v = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(mspace+2, &(v->values));
+   vec_create(mspace, &(v->values));
 
    /* Clone the values */
-   v->values[0] = u->values[0];
-   v->values[1] = u->values[1];
+   for (int i = 0; i<= mspace-1; i++)
+   {
+      v->values[i] = u->values[i];
+   }
 
    *v_ptr = v;
 
@@ -502,9 +512,11 @@ my_Sum(braid_App     app,
        double        beta,
        braid_Vector  y)
 {
-
-   (y->values)[0] = alpha*(x->values)[0] + beta*(y->values)[0];
-   (y->values)[1] = alpha*(x->values)[1] + beta*(y->values)[1];
+   int mspace = (app->mspace);
+   for (int i = 0; i <= mspace-1; i++)
+   {
+      (y->values)[i] = alpha*(x->values)[i] + beta*(y->values)[i];
+   }
 
    return 0;
 }
@@ -519,7 +531,7 @@ my_SpatialNorm(braid_App     app,
    int i;
    double dot = 0.0;
 
-   for (i = 0; i < 2; i++)
+   for (i = 0; i <= mspace-1; i++)
    {
       dot += (u->values)[i]*(u->values)[i];
    }
@@ -538,6 +550,7 @@ my_Access(braid_App          app,
           braid_AccessStatus astatus)
 {
    int   done, index;
+   int   mspace = (app->mspace);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);
@@ -558,8 +571,8 @@ my_Access(braid_App          app,
       {
          free(app->w[index]);
       }
-      vec_create(2, &(app->w[index]));
-      vec_copy(2, (u->values), (app->w[index]));
+      vec_create(mspace, &(app->w[index]));
+      vec_copy(mspace, (u->values), (app->w[index]));
    }
 
 //   {
@@ -867,7 +880,7 @@ main(int argc, char *argv[])
             if ((i+1) < (app->ntime))
             {
                vec_copy(mspace, w[i+1], u);
-               apply_PhiAdjoint(dt, dx, nu, mspace, u);
+               apply_PhiAdjoint(dt, u);
                vec_axpy(mspace, -1.0, w[i], u);
             }
             else
@@ -878,7 +891,12 @@ main(int argc, char *argv[])
             apply_Uinv(dt, dx, mspace, u);
             vec_axpy(mspace, -1.0, U0, u);
 
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), u[0], u[1]);
+            fprintf(file, "%05d: ", (i+1));
+            for (j = 0; j < mspace-1; j++)
+            {
+               fprintf(file, "% 1.14e, ", u[j]);
+            }
+            fprintf(file, "% 1.14e\n", u[mspace-1])
          }
          vec_destroy(u);
          fflush(file);
@@ -895,14 +913,20 @@ main(int argc, char *argv[])
 
          sprintf(filename, "%s.%03d", "ex-04.out.v", (app->myid));
          file = fopen(filename, "w");
-         vec_create(mspace, &v);
+         vec_create((app->mspace), &v);
          for (i = 0; i < (app->ntime); i++)
          {
             double **w = (app->w);
 
             vec_axpy(mspace, 1/(alpha*dx),w[i],v );
 
-            fprintf(file, "%05d: % 1.14e\n", (i+1), v[0]);
+            /* TODO Dynamical print based on size of v */
+            fprintf(file, "%05d: ", (i+1));
+            for (j = 0; j < (app->mspace)-1; j++)
+            {
+               fprintf(file, "% 1.14e, ", v[j]);
+            }
+            fprintf(file, "% 1.14e\n", v[(app->mspace)-1])
          }
          vec_destroy(v);
          fflush(file);
