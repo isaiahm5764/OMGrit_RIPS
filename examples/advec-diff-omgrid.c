@@ -267,7 +267,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = dx/(mspace+2);
+   dx = 1/(mspace+1);
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
@@ -367,7 +367,8 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
-            braid_TriStatus status)
+            braid_TriStatus status,
+            )
 {
    double  t, tprev, tnext, dt;
    double *utmp, *rtmp;
@@ -588,8 +589,9 @@ my_BufPack(braid_App           app,
 {
    double *dbuffer = buffer;
    int i;
+   int mspace = (app->mspace); 
 
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < mspace; i++)
    {
       dbuffer[i] = (u->values)[i];
    }
@@ -610,13 +612,14 @@ my_BufUnpack(braid_App           app,
    my_Vector *u = NULL;
    double    *dbuffer = buffer;
    int i;
+   int mspace = (app->mspace); 
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
    u->values = (double*) malloc( 2*sizeof(double) );
 
    /* Unpack the buffer */
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < mspace; i++)
    {
       (u->values)[i] = dbuffer[i];
    }
