@@ -245,7 +245,7 @@ my_TriResidual(braid_App       app,
                braid_TriStatus status,
                braid_Vector    u_0)
 {
-   double  t, tprev, tnext, dt;
+   double  t, tprev, tnext, dt, dx;
    double  nu = (app->nu);
 	 double  alpha = (app->alpha);
    double *rtmp, *utmp;
@@ -265,6 +265,9 @@ my_TriResidual(braid_App       app,
    {
       dt = t - tprev;
    }
+
+   /* Get the space-step size */
+   dx = dx/(mspace+2);
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
@@ -367,9 +370,8 @@ my_TriSolve(braid_App       app,
             braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
-   double  gamma = (app->gamma);
    double *utmp, *rtmp;
-   int mspace = (app->mspace)
+   int mspace = (app->mspace);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -431,10 +433,10 @@ my_Init(braid_App     app,
         braid_Vector *u_ptr)
 {
    my_Vector *u;
-
+   int mspace = (app->mspace); 
    /* Allocate the vector */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(, &(u->values));
+   vec_create(mspace+2, &(u->values));
 
    u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
    u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
@@ -452,10 +454,10 @@ my_Clone(braid_App     app,
          braid_Vector *v_ptr)
 {
    my_Vector *v;
-
+   int mspace = (app->mspace); 
    /* Allocate the vector */
    v = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(2, &(v->values));
+   vec_create(mspace+2, &(v->values));
 
    /* Clone the values */
    v->values[0] = u->values[0];
@@ -635,7 +637,7 @@ main(int argc, char *argv[])
          
    double      tstart, tstop, dt; 
    int         rank, ntime, mspace, arg_index;
-   double      gamma;
+   double      alpha, nu;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double      tol;
@@ -644,7 +646,7 @@ main(int argc, char *argv[])
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-   /* Define space domain */
+   /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 20;
 
    /* Define time domain */
@@ -653,7 +655,8 @@ main(int argc, char *argv[])
    tstop  = 1.0;             /* End of time domain*/
 
    /* Define some optimization parameters */
-   gamma = 0.005;            /* Relaxation parameter in the objective function */
+   alpha = 0.005;            /* parameter in the objective function */
+   nu    = 1;                /* parameter in PDE */
 
    /* Define some Braid parameters */
    max_levels     = 30;
@@ -673,15 +676,18 @@ main(int argc, char *argv[])
       if ( strcmp(argv[arg_index], "-help") == 0 )
       {
          printf("\n");
-         printf(" Solves a simple optimal control problem in time-serial on [0, 1] \n\n");
-         printf("  min   \\int_0^1 u_1(t)^2 + u_2(t)^2 + gamma c(t)^2  dt \n\n");
-         printf("  s.t.  d/dt u_1(t) = u_2(t) \n");
-         printf("        d/dt u_2(t) = -u_2(t) + c(t) \n\n");
+         printf(" Solves the advection-diffusion model problem \n\n");
+         printf("  min  1/2 \\int_0^T\\int_0^1 (u(x,t)-ubar(x))^2 + alpha*v(x,t)^2  dxdt \n\n");
+         printf("  s.t.  u_t + u_x - nu*u_xx = v(x,t) \n");
+         printf("        u(0,t) = u(1,t) = 0 \n\n");
+         printf("        u(x,0) = u0(x) \n");
+         printf("  -tstop <tstop>          : Upper integration limit for time\n");
          printf("  -ntime <ntime>          : Num points in time\n");
          printf("  -mspace <mspace>        : Num points in space\n");
-         printf("  -gamma <gamma>          : Relaxation parameter in the objective function \n");
+         printf("  -nu <nu>                : Constant Parameter in PDE  \n");
+         printf("  -alpha <alpha>          : Constant Parameter in Objective Function  \n");
          printf("  -ml <max_levels>        : Max number of braid levels \n");
-         printf("  -nu  <nrelax>           : Num F-C relaxations\n");
+         printf("  -num  <nrelax>          : Num F-C relaxations\n");
          printf("  -nuc <nrelaxc>          : Num F-C relaxations on coarsest grid\n");
          printf("  -mi <maxiter>           : Max iterations \n");
          printf("  -cf <cfactor>           : Coarsening factor \n");
@@ -695,15 +701,15 @@ main(int argc, char *argv[])
          arg_index++;
          ntime = atoi(argv[arg_index++]);
       }
+      else if ( strcmp(argv[arg_index], "-tstop") == 0 )
+      {
+         arg_index++;
+         tstop = atoi(argv[arg_index++]);
+      }
       else if ( strcmp(argv[arg_index], "-mspace") == 0 )
       {
          arg_index++;
          mspace = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-gamma") == 0 )
-      {
-         arg_index++;
-         gamma = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-ml") == 0 )
       {
@@ -711,6 +717,16 @@ main(int argc, char *argv[])
          max_levels = atoi(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-nu") == 0 )
+      {
+         arg_index++;
+         nu = atoi(argv[arg_index++]);
+      }
+      else if ( strcmp(argv[arg_index], "-alpha") == 0 )
+      {
+         arg_index++;
+         alpha = atoi(argv[arg_index++]);
+      }
+      else if ( strcmp(argv[arg_index], "-num") == 0 )
       {
          arg_index++;
          nrelax = atoi(argv[arg_index++]);
@@ -761,7 +777,8 @@ main(int argc, char *argv[])
    app->myid     = rank;
    app->ntime    = ntime;
    app->mspace   = mspace;
-   app->gamma    = gamma;
+   app->nu       = nu;
+   app->alpha    = alpha;
    app->w        = NULL;
 
    /* Initialize XBraid */

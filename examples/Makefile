@@ -138,6 +138,10 @@ ex-04-omgrit: ex-04-omgrit.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
+advec-diff-omgrid: advec-diff-omgrid.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
 # Rule for compiling .c files
 %: %.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
