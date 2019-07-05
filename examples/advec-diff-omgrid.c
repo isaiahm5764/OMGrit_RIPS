@@ -227,6 +227,8 @@ apply_DAdjoint(double dt, int M, double *v)
 	 }
 }
 
+/*------------------------------------*/
+
 /*--------------------------------------------------------------------------
  * TriMGRIT wrapper routines
  *--------------------------------------------------------------------------*/
@@ -240,7 +242,8 @@ my_TriResidual(braid_App       app,
                braid_Vector    f,
                braid_Vector    r,
                braid_Int       homogeneous,
-               braid_TriStatus status)
+               braid_TriStatus status,
+               braid_Vector    u_0)
 {
    double  t, tprev, tnext, dt;
    double  nu = (app->nu);
@@ -313,12 +316,22 @@ my_TriResidual(braid_App       app,
    }
 
    /* Subtract rhs gbar (add g) in non-homogeneous case */
+   /* This will also checks if*/
    if ((!homogeneous) && (index == 0))
    {
-      /* rtmp = rtmp + g; g = Phi_0 u_0 */
-			/* utmp[0]=*/
+      /* rtmp = rtmp + g; g = Phi_0 U^0 */
+		/* 
       utmp[0] =  0.0;
       utmp[mspace-1] = 0.0;
+      apply_Phi(dt, dx, nu, mspace, utmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
+      */
+
+      /* COULD I DO THIS WITHOUT MAKING THE TMP VECTORS */
+      for (int i = 0; i <= mspace-1; i++)
+      {
+         utmp[i]=u0[i];  
+      }
       apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
