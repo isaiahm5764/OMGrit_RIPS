@@ -63,6 +63,7 @@ typedef struct _braid_App_struct
                          /* So including boundaries we have M+2 space points */
 
    double **w;           /* Adjoint vectors at each time point on my proc */
+   double **U0;
 
 } my_App;
 
@@ -242,8 +243,7 @@ my_TriResidual(braid_App       app,
                braid_Vector    f,
                braid_Vector    r,
                braid_Int       homogeneous,
-               braid_TriStatus status,
-               braid_Vector    u_0)
+               braid_TriStatus status)
 {
    double  t, tprev, tnext, dt, dx;
    double  nu = (app->nu);
@@ -251,6 +251,7 @@ my_TriResidual(braid_App       app,
    double *rtmp, *utmp;
    int     level, index;
    int     mspace = (app->mspace);
+   double u0 = (app->u0);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -366,12 +367,12 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
-            braid_TriStatus status,
-            braid_Vector    u0)
+            braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
+   double u0 = (app->u0);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -603,8 +604,9 @@ my_BufPack(braid_App           app,
 {
    double *dbuffer = buffer;
    int i;
+   int mspace = (app->mspace); 
 
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < mspace; i++)
    {
       dbuffer[i] = (u->values)[i];
    }
@@ -625,13 +627,14 @@ my_BufUnpack(braid_App           app,
    my_Vector *u = NULL;
    double    *dbuffer = buffer;
    int i;
+   int mspace = (app->mspace); 
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
    u->values = (double*) malloc( 2*sizeof(double) );
 
    /* Unpack the buffer */
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < mspace; i++)
    {
       (u->values)[i] = dbuffer[i];
    }
@@ -795,6 +798,8 @@ main(int argc, char *argv[])
    app->nu       = nu;
    app->alpha    = alpha;
    app->w        = NULL;
+   /* Set this to whatever u0 is */
+   app->U0       = NULL;
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
@@ -840,6 +845,7 @@ main(int argc, char *argv[])
       }
 
       /* Compute state u from adjoint w and print to file */
+      /* Not sure if this is completely correct - tom */
       {
          char    filename[255];
          FILE   *file;
@@ -848,30 +854,31 @@ main(int argc, char *argv[])
 
          sprintf(filename, "%s.%03d", "ex-04.out.u", (app->myid));
          file = fopen(filename, "w");
-         vec_create((app->mspace), &u);
+         vec_create(mspace, &u);
          for (i = 0; i < (app->ntime); i++)
          {
             double **w = (app->w);
 
             if ((i+1) < (app->ntime))
             {
-               vec_copy((app->mspace), w[i+1], u);
+               vec_copy(mspace, w[i+1], u);
                apply_PhiAdjoint(dt, u);
-               vec_axpy((app->mspace), -1.0, w[i], u);
+               vec_axpy(mspace, -1.0, w[i], u);
             }
             else
             {
-               vec_copy((app->mspace), w[i], u);
-               vec_scale((app->mspace), -1.0, u);
+               vec_copy(mspace, w[i], u);
+               vec_scale(mspace, -1.0, u);
             }
-            apply_Uinv(dt, u);
+            apply_Uinv(dt, dx, mspace, u);
+            vec_axpy(myspace, -1.0, U0, u)
 
             fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < (app->mspace)-1; j++)
+            for (j = 0; j < mspace-1; j++)
             {
                fprintf(file, "% 1.14e, ", u[j]);
             }
-            fprintf(file, "% 1.14e\n", u[(app->mspace)-1])
+            fprintf(file, "% 1.14e\n", u[mspace-1])
          }
          vec_destroy(u);
          fflush(file);
@@ -879,6 +886,7 @@ main(int argc, char *argv[])
       }
 
       /* Compute control v from adjoint w and print to file */
+      /* V = (1/(alpha*)) */
       {
          char    filename[255];
          FILE   *file;
