@@ -633,7 +633,7 @@ main(int argc, char *argv[])
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-   /* Define space domain */
+   /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 20;
 
    /* Define time domain */
