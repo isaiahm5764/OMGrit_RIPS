@@ -367,12 +367,7 @@ my_TriSolve(braid_App       app,
             braid_Vector    f,
             braid_Vector    u,
             braid_Int       homogeneous,
-<<<<<<< HEAD
-            braid_TriStatus status
-            )
-=======
             braid_TriStatus status)
->>>>>>> 492fe1f66083ed423d2430697325b01cda1ab748
 {
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
@@ -454,7 +449,7 @@ my_Init(braid_App     app,
 
    /* Allocate the vector */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(, &(u->values));
+   vec_create(mspace, &(u->values));
 
    for (int i = 0; i <= mspace-1; i++)
    {
@@ -530,7 +525,7 @@ my_SpatialNorm(braid_App     app,
 {
    int i;
    double dot = 0.0;
-
+   int mspace = (app->mspace);
    for (i = 0; i <= mspace-1; i++)
    {
       dot += (u->values)[i]*(u->values)[i];
@@ -867,7 +862,7 @@ main(int argc, char *argv[])
       {
          char    filename[255];
          FILE   *file;
-         int     i;
+         int     i, j;
          double *u;
 
          sprintf(filename, "%s.%03d", "ex-04.out.u", (app->myid));
@@ -880,7 +875,7 @@ main(int argc, char *argv[])
             if ((i+1) < (app->ntime))
             {
                vec_copy(mspace, w[i+1], u);
-               apply_PhiAdjoint(dt, u);
+               apply_PhiAdjoint(dt, dx, nu, mspace, u);
                vec_axpy(mspace, -1.0, w[i], u);
             }
             else
@@ -896,7 +891,7 @@ main(int argc, char *argv[])
             {
                fprintf(file, "% 1.14e, ", u[j]);
             }
-            fprintf(file, "% 1.14e\n", u[mspace-1])
+            fprintf(file, "% 1.14e\n", u[mspace-1]);
          }
          vec_destroy(u);
          fflush(file);
@@ -908,7 +903,7 @@ main(int argc, char *argv[])
       {
          char    filename[255];
          FILE   *file;
-         int     i;
+         int     i,j;
          double *v;
 
          sprintf(filename, "%s.%03d", "ex-04.out.v", (app->myid));
@@ -926,7 +921,7 @@ main(int argc, char *argv[])
             {
                fprintf(file, "% 1.14e, ", v[j]);
             }
-            fprintf(file, "% 1.14e\n", v[(app->mspace)-1])
+            fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
          }
          vec_destroy(v);
          fflush(file);
