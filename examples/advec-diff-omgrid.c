@@ -268,7 +268,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = 1/(mspace+1);
+   dx = 1/((double)(mspace+1));
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
@@ -387,7 +387,7 @@ my_TriSolve(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = 1/(mspace+1);
+   dx = 1/((double)(mspace+1));;
 
 
    /* Create temporary vector */
@@ -679,7 +679,7 @@ main(int argc, char *argv[])
    tstop  = 1.0;             /* End of time domain*/
 
    /* Define some optimization parameters */
-   alpha = 0.005;            /* parameter in the objective function */
+   alpha = .005;            /* parameter in the objective function */
    nu    = 1;                /* parameter in PDE */
 
    /* Define some Braid parameters */
@@ -835,7 +835,7 @@ main(int argc, char *argv[])
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
 
-   dx = 1/(mspace+1);
+   dx = 1/((double)(mspace+1));;
 
    if (access_level > 0)
    {
