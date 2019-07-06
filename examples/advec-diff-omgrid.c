@@ -323,20 +323,20 @@ my_TriResidual(braid_App       app,
    if ((!homogeneous) && (index == 0))
    {
       /* rtmp = rtmp + g; g = Phi_0 U^0 */
-		/* 
-      utmp[0] =  0.0;
-      utmp[mspace-1] = 0.0;
-      apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp);
-      */
-
       /* COULD I DO THIS WITHOUT MAKING THE TMP VECTORS */
-      for (int i = 0; i <= mspace-1; i++)
-      {
-         utmp[i]=u0[i];  
-      }
+      vec_copy(mspace, (u0->values),utmp);
       apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);
+   }
+
+   if ((!homogeneous) && (index != 0))
+   {
+      /* r=r- U^{0}*/
+      vec_copy(mspace, (u0->values), utmp);
+      vec_axpy(mspace, -1, utmp, rtmp);
+      /* r=r+KU^{0}*/
+      apply_Phi(dt, dx, nu, mspace, utmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);  
    }
 
    /* Subtract rhs f */
