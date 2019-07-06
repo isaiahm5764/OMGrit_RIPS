@@ -324,7 +324,7 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp + g; g = Phi_0 U^0 */
       /* COULD I DO THIS WITHOUT MAKING THE TMP VECTORS */
-      vec_copy(mspace, (u0->values),utmp);
+      vec_copy(mspace, u0,utmp);
       apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
@@ -332,8 +332,8 @@ my_TriResidual(braid_App       app,
    if ((!homogeneous) && (index != 0))
    {
       /* r=r- U^{0}*/
-      vec_copy(mspace, (u0->values), utmp);
-      vec_axpy(mspace, -1, utmp, rtmp);
+      vec_copy(mspace, u0, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp);
       /* r=r+KU^{0}*/
       apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp);  
@@ -843,15 +843,18 @@ main(int argc, char *argv[])
       {
          char  filename[255];
          FILE *file;
-         int   i;
+         int   i,j;
 
-         sprintf(filename, "%s.%03d", "ex-04.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {
             double **w = (app->w);
-
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), w[i][0], w[i][1]);
+            fprintf(file, "%05d: ", (i+1));
+            for(j=0; j <mspace-1; j++){
+               fprintf(file, "% 1.14e, ", w[i][i]);
+            }
+            fprintf(file, "\n");
          }
          fflush(file);
          fclose(file);
@@ -865,7 +868,7 @@ main(int argc, char *argv[])
          int     i, j;
          double *u;
 
-         sprintf(filename, "%s.%03d", "ex-04.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff.out.u", (app->myid));
          file = fopen(filename, "w");
          vec_create(mspace, &u);
          for (i = 0; i < (app->ntime); i++)
@@ -906,7 +909,7 @@ main(int argc, char *argv[])
          int     i,j;
          double *v;
 
-         sprintf(filename, "%s.%03d", "ex-04.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create((app->mspace), &v);
          for (i = 0; i < (app->ntime); i++)
