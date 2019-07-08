@@ -410,7 +410,7 @@ my_TriSolve(braid_App       app,
       /* At the leftmost point, use a different center coefficient approximation */
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i] = -rtmp[i]/( 1 + dt*dt/alpha );
+         rtmp[i] = -rtmp[i]/( (1 + dt*dt/alpha)/(dx*dt) );
       }
    }
 
@@ -833,11 +833,6 @@ main(int argc, char *argv[])
 
    dx = 1/((double)(mspace+1));;
    
-   printf("WHERE IS THIS STRING GOING!!!!!");
-   printf("\n");
-   printf("%f", dt);
-   printf("\n");
-   printf("%f",dx);
 
    if (access_level > 0)
    {
