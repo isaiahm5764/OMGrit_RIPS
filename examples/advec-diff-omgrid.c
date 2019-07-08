@@ -139,7 +139,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u)
 	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
 	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
 	 double A = dt*nu/(dx*dx) + dt/(2*dx);
-	 double B = 1 - 2*nu*dt/(dx*dx);
+	 double B = 1 - (2*nu*dt/(dx*dx));
 	 double C = dt*nu / (dx*dx) - dt/(2*dx);
 	 double tmp_u_1 = u[0];
 	 double tmp_u_2 = u[1];
@@ -201,7 +201,7 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 {
 	for (int i = 0; i <= M-1; i++)
 	{
-		v[i] /= alpha*dx*dt;
+		v[i] /= alpha*dx;
 	}
    
 }
@@ -224,7 +224,7 @@ apply_DAdjoint(double dt, int M, double *v)
 {
 	 for (int i = 0; i <= M-1; i++)
 	 {
-		 v[i] /= -dt;
+		 v[i] /= -1;
 	 }
 }
 
@@ -318,7 +318,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Subtract rhs gbar (add g) in non-homogeneous case */
-   if ((!homogeneous) && (index != 0))
+   if ((!homogeneous))
    {
       vec_copy(mspace, u0, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
@@ -407,7 +407,7 @@ my_TriSolve(braid_App       app,
       /* At the leftmost point, use a different center coefficient approximation */
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i]=-rtmp[i]/( 1 + dt*dt/alpha );
+         rtmp[i]=-rtmp[i]/(dx*dt*( 1 + dt*dt/alpha ));
       }
    }
 
@@ -659,10 +659,10 @@ main(int argc, char *argv[])
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 9;
+   mspace = 8;
 
    /* Define time domain */
-   ntime  = 1280;              /* Total number of time-steps */
+   ntime  = 1024;              /* Total number of time-steps */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
 
@@ -671,7 +671,7 @@ main(int argc, char *argv[])
    nu    = 2;                /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 5;
+   max_levels     = 2;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 7;
