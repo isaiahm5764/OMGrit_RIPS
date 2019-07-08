@@ -303,7 +303,6 @@ my_TriResidual(braid_App       app,
    /* Compute action of west block */
    if (uleft != NULL)
    {
-      /* rtmp = rtmp - Phi_i U_{i-1}^{-1} uleft */
       vec_copy(mspace, (uleft->values), utmp);
       apply_Uinv(dt, dx, mspace, utmp);
       apply_Phi(dt, dx, nu, mspace, utmp);
@@ -313,23 +312,24 @@ my_TriResidual(braid_App       app,
    /* Compute action of east block */
    if (uright != NULL)
    {
-      /* rtmp = rtmp - U_i^{-1} Phi_{i+1}^T uright */
       vec_copy(mspace, (uright->values), utmp);
       apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
       apply_Uinv(dt, dx, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
+
    /* No change for index 0 */
 
    if (!homogeneous)
    {
-      /* r=r- U^{0}*/
       vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp);
-      /* r=r+KU^{0}*/
+      vec_axpy(mspace, -1.0, utmp, rtmp);
+
+      vec_copy(mspace, u0,utmp);
       apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);  
+      vec_axpy(mspace, 1.0, utmp, rtmp); 
+
    }
 
    /* Subtract rhs f */
@@ -364,7 +364,6 @@ my_TriSolve(braid_App       app,
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
-   double *u0 = (app->U0);
    double alpha = (app->alpha);
    
    /* Get the time-step size */
@@ -663,19 +662,19 @@ main(int argc, char *argv[])
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 20;
+   mspace = 9;
 
    /* Define time domain */
-   ntime  = 20;              /* Total number of time-steps */
+   ntime  = 1280;              /* Total number of time-steps */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
-   nu    = 1;                /* parameter in PDE */
+   nu    = 2;                /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 30;
+   max_levels     = 5;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 7;
@@ -786,7 +785,11 @@ main(int argc, char *argv[])
 
    /* Solve adjoint equations starting at time point t1=dt, recognizing that
     * braid will label this time point as index=0 instead of 1 */
-   dt = (tstop-tstart)/ntime;
+   
+
+   dt = (tstop-tstart)/ntime; 
+   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/(2*2*2^max_levels); */
+   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/2;*/
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
@@ -798,9 +801,16 @@ main(int argc, char *argv[])
    app->w        = NULL;
 
    /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
+<<<<<<< HEAD
    double *U0 = (double*) malloc( ntime*sizeof(double) );
    for(int i=0; i<mspace-1; i++){
       U0[i]=cos(2*PI * (i/(mspace-1)));
+=======
+   double *U0 = (double*) malloc( (mspace)*sizeof(double) );
+   for(int i=0; i<mspace-1; i++){
+      /*U0[i]=sin(2*PI * (i/mspace-1));*/
+      U0[i]=1.0;
+>>>>>>> 4387bb909278278422825fd406b2131793d5df34
    }
    app->U0       = U0;
 
@@ -828,6 +838,12 @@ main(int argc, char *argv[])
    braid_Drive(core);
 
    dx = 1/((double)(mspace+1));;
+   
+   printf("WHERE IS THIS STRING GOING!!!!!");
+   printf("\n");
+   printf("%f", dt);
+   printf("\n");
+   printf("%f",dx);
 
    if (access_level > 0)
    {
