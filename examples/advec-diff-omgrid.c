@@ -138,9 +138,9 @@ apply_Phi(double dt, double dx, double nu, int M, double *u)
 {	 
 	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
 	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = dt*nu/(dx*dx) + dt/(2*dx);
-	 double B = 1 - 2*nu*dt/(dx*dx);
-	 double C = dt*nu / (dx*dx) - dt/(2*dx);
+	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
+	 double B = 1 - ((2*nu*dt)/(dx*dx));
+	 double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
 	 double tmp_u_1 = u[0];
 	 double tmp_u_2 = u[1];
 	 double tmp_u_Mm1 = u[M-2];
@@ -164,9 +164,9 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
 {
 	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
 	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = dt*nu/(dx*dx) + dt/(2*dx);
-	 double B = 1 - 2*nu*dt/(dx*dx);
-	 double C = dt*nu / (dx*dx) - dt/(2*dx);
+	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
+    double B = 1 - ((2*nu*dt)/(dx*dx));
+    double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
 	 double tmp_w_1 = w[0];
 	 double tmp_w_2 = w[1];
 	 double tmp_w_Mm1 = w[M-2];
@@ -190,7 +190,7 @@ apply_Uinv(double dt, double dx, int M, double *u)
 {
    for (int i = 0; i <= M-1; i++)
 	 {
-		 u[i]/=dx*dt;
+		 u[i] /= dx*dt;
 	 }
 }
 
@@ -201,7 +201,7 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 {
 	for (int i = 0; i <= M-1; i++)
 	{
-		v[i] /= alpha*dx*dt;
+		v[i] /= alpha*dx;
 	}
    
 }
@@ -224,7 +224,7 @@ apply_DAdjoint(double dt, int M, double *v)
 {
 	 for (int i = 0; i <= M-1; i++)
 	 {
-		 v[i] /= -dt;
+		 v[i] /= -1;
 	 }
 }
 
@@ -266,6 +266,7 @@ my_TriResidual(braid_App       app,
    {
       dt = t - tprev;
    }
+
 
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
@@ -319,24 +320,16 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
-   /* Subtract rhs gbar (add g) in non-homogeneous case */
-   if ((!homogeneous) && (index == 0))
-   {
-      /* rtmp = rtmp + g; g = Phi_0 U^0 */
-      /* COULD I DO THIS WITHOUT MAKING THE TMP VECTORS */
-      vec_copy(mspace, u0,utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp);
-   }
+   /* No change for index 0 */
 
-   if ((!homogeneous) && (index != 0))
+   if (!homogeneous)
    {
       /* r=r- U^{0}*/
       vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
       /* r=r+KU^{0}*/
       apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp);  
+      vec_axpy(mspace, -1.0, utmp, rtmp);  
    }
 
    /* Subtract rhs f */
@@ -345,7 +338,6 @@ my_TriResidual(braid_App       app,
       /* rtmp = rtmp - f */
       vec_axpy(mspace, -1.0, (f->values), rtmp);
    }
-   
    /* Copy temporary residual vector into residual */
    vec_copy(mspace, rtmp, (r->values));
    
@@ -411,7 +403,7 @@ my_TriSolve(braid_App       app,
    {
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i]=-rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
+         rtmp[i] = -rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
       }
    }
    else
@@ -419,7 +411,7 @@ my_TriSolve(braid_App       app,
       /* At the leftmost point, use a different center coefficient approximation */
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i]=-rtmp[i]/( 1 + dt*dt/alpha );
+         rtmp[i] = -rtmp[i]/( 1 + dt*dt/alpha );
       }
    }
 
@@ -807,8 +799,8 @@ main(int argc, char *argv[])
 
    /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
    double *U0 = (double*) malloc( ntime*sizeof(double) );
-   for(int i=0; i<ntime; i++){
-      U0[i]=cos(2*PI * (i/ntime));
+   for(int i=0; i<mspace-1; i++){
+      U0[i]=cos(2*PI * (i/(mspace-1)));
    }
    app->U0       = U0;
 
