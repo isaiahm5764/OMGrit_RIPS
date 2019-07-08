@@ -801,16 +801,10 @@ main(int argc, char *argv[])
    app->w        = NULL;
 
    /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
-<<<<<<< HEAD
+
    double *U0 = (double*) malloc( ntime*sizeof(double) );
    for(int i=0; i<mspace-1; i++){
-      U0[i]=cos(2*PI * (i/(mspace-1)));
-=======
-   double *U0 = (double*) malloc( (mspace)*sizeof(double) );
-   for(int i=0; i<mspace-1; i++){
-      /*U0[i]=sin(2*PI * (i/mspace-1));*/
-      U0[i]=1.0;
->>>>>>> 4387bb909278278422825fd406b2131793d5df34
+      U0[i]=1;
    }
    app->U0       = U0;
 
