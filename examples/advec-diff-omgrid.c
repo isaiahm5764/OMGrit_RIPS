@@ -138,9 +138,9 @@ apply_Phi(double dt, double dx, double nu, int M, double *u)
 {	 
 	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
 	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = dt*nu/(dx*dx) + dt/(2*dx);
-	 double B = 1 - (2*nu*dt/(dx*dx));
-	 double C = dt*nu / (dx*dx) - dt/(2*dx);
+	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
+	 double B = 1 - ((2*nu*dt)/(dx*dx));
+	 double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
 	 double tmp_u_1 = u[0];
 	 double tmp_u_2 = u[1];
 	 double tmp_u_Mm1 = u[M-2];
@@ -164,9 +164,9 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
 {
 	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
 	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = dt*nu/(dx*dx) + dt/(2*dx);
-	 double B = 1 - 2*nu*dt/(dx*dx);
-	 double C = dt*nu / (dx*dx) - dt/(2*dx);
+	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
+    double B = 1 - ((2*nu*dt)/(dx*dx));
+    double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
 	 double tmp_w_1 = w[0];
 	 double tmp_w_2 = w[1];
 	 double tmp_w_Mm1 = w[M-2];
@@ -190,7 +190,7 @@ apply_Uinv(double dt, double dx, int M, double *u)
 {
    for (int i = 0; i <= M-1; i++)
 	 {
-		 u[i]/=dx*dt;
+		 u[i] /= dx*dt;
 	 }
 }
 
@@ -267,6 +267,7 @@ my_TriResidual(braid_App       app,
       dt = t - tprev;
    }
 
+
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
 
@@ -317,8 +318,8 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
-   /* Subtract rhs gbar (add g) in non-homogeneous case */
-   if ((!homogeneous))
+   /* No change for index 0 */
+   if (!homogeneous)
    {
       vec_copy(mspace, u0, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
@@ -326,6 +327,7 @@ my_TriResidual(braid_App       app,
       vec_copy(mspace, u0,utmp);
       apply_Phi(dt, dx, nu, mspace, utmp);
       vec_axpy(mspace, 1.0, utmp, rtmp); 
+
    }
 
    /* Subtract rhs f */
@@ -334,7 +336,6 @@ my_TriResidual(braid_App       app,
       /* rtmp = rtmp - f */
       vec_axpy(mspace, -1.0, (f->values), rtmp);
    }
-   
    /* Copy temporary residual vector into residual */
    vec_copy(mspace, rtmp, (r->values));
    
@@ -399,7 +400,7 @@ my_TriSolve(braid_App       app,
    {
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i]=-rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
+         rtmp[i] = -rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
       }
    }
    else
@@ -407,7 +408,7 @@ my_TriSolve(braid_App       app,
       /* At the leftmost point, use a different center coefficient approximation */
       for(int i = 0; i<=mspace-1; i++)
       {
-         rtmp[i]=-rtmp[i]/(dx*dt*( 1 + dt*dt/alpha ));
+         rtmp[i] = -rtmp[i]/( (1 + dt*dt/alpha)/(dx*dt) );
       }
    }
 
@@ -661,21 +662,16 @@ main(int argc, char *argv[])
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
 
-   /* Define time domain */
-   ntime  = 1024;              /* Total number of time-steps */
-   tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
-
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
    nu    = 2;                /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 2;
+   max_levels     = 5;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 7;
-   maxiter        = 20;
+   maxiter        = 300;
    cfactor        = 2;
    tol            = 1.0e-6;
    access_level   = 1;
@@ -780,13 +776,26 @@ main(int argc, char *argv[])
       }
    }
 
-   /* Solve adjoint equations starting at time point t1=dt, recognizing that
-    * braid will label this time point as index=0 instead of 1 */
-   
 
-   dt = (tstop-tstart)/ntime; 
-   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/(2*2*2^max_levels); */
-   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/2;*/
+   /* Define the space step for dt computation */
+   dx=(double)1/(mspace+1);
+
+   /* Define time domain */
+   tstart = 0.0;             /* Beginning of time domain */
+   tstop  = 1.0;             /* End of time domain*/
+
+   /* Compute ntime and the time-step based on dx */
+   double Dt = tstop-tstart;
+   double k = max_levels+1-log((dx*dx)/(nu*Dt))/log(2);
+   if (k>0)
+   {
+      ntime = pow(2,(int)k+1);
+   }
+   else
+   {
+      ntime=2;
+   }
+   dt = (tstop-tstart)/(double)ntime;   
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
@@ -798,10 +807,10 @@ main(int argc, char *argv[])
    app->w        = NULL;
 
    /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
-   double *U0 = (double*) malloc( (mspace)*sizeof(double) );
+
+   double *U0 = (double*) malloc( ntime*sizeof(double) );
    for(int i=0; i<mspace-1; i++){
-      /*U0[i]=sin(2*PI * (i/mspace-1));*/
-      U0[i]=1.0;
+      U0[i]=1;
    }
    app->U0       = U0;
 
@@ -830,11 +839,6 @@ main(int argc, char *argv[])
 
    dx = 1/((double)(mspace+1));;
    
-   printf("WHERE IS THIS STRING GOING!!!!!");
-   printf("\n");
-   printf("%f", dt);
-   printf("\n");
-   printf("%f",dx);
 
    if (access_level > 0)
    {

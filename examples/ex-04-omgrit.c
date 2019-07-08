@@ -347,7 +347,7 @@ my_TriSolve(braid_App       app,
    }
 
    /* Complete residual update */
-   vec_axpy(2, 1.0, utmp, (u->values));
+   vec_axpy(2, 1.0, utmp, rtmp);
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
