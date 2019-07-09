@@ -969,7 +969,7 @@ main(int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "advec-diff.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff-imp.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {
@@ -997,7 +997,7 @@ main(int argc, char *argv[])
          int     i, j;
          double *u, *u1;
 
-         sprintf(filename1, "%s.%03d", "advec-diff.out.u0", (app->myid));
+         sprintf(filename1, "%s.%03d", "advec-diff-imp.out.u0", (app->myid));
          file = fopen(filename1, "w");
          vec_create(mspace, &u);
          vec_copy(mspace, U0, u);
@@ -1012,7 +1012,7 @@ main(int argc, char *argv[])
             }
          vec_destroy(u);
 
-         sprintf(filename, "%s.%03d", "advec-diff.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff-imp.out.u", (app->myid));
          file = fopen(filename, "w");
          vec_create(mspace, &u);
          vec_create(mspace, &u1);
@@ -1058,7 +1058,7 @@ main(int argc, char *argv[])
          int     i,j;
          double *v;
 
-         sprintf(filename, "%s.%03d", "advec-diff.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "advec-diff-imp.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create((app->mspace), &v);
          for (i = 0; i < (app->ntime); i++)
