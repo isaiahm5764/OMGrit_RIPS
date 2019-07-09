@@ -848,8 +848,13 @@ main(int argc, char *argv[])
          {
             double **w = (app->w);
             fprintf(file, "%05d: ", (i+1));
-            for(j=0; j <mspace-1; j++){
-               fprintf(file, "% 1.14e, ", w[i][i]);
+            for(j=0; j <mspace; j++){
+               if(j==mspace-1){
+                  fprintf(file, "% 1.14e", w[i][j]);
+               }
+               else{
+                  fprintf(file, "% 1.14e, ", w[i][j]);
+               }
             }
             fprintf(file, "\n");
          }
@@ -876,6 +881,7 @@ main(int argc, char *argv[])
             {
                vec_copy(mspace, w[i+1], u);
                apply_PhiAdjoint(dt, dx, nu, mspace, u);
+               apply_Uinv(dt, dx, mspace, u);
                vec_axpy(mspace, -1.0, w[i], u);
             }
             else
@@ -883,11 +889,10 @@ main(int argc, char *argv[])
                vec_copy(mspace, w[i], u);
                vec_scale(mspace, -1.0, u);
             }
-            apply_Uinv(dt, dx, mspace, u);
             vec_axpy(mspace, -1.0, U0, u);
 
             fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < mspace-1; j++)
+            for (j = 0; j < mspace; j++)
             {
                fprintf(file, "% 1.14e, ", u[j]);
             }
@@ -917,7 +922,7 @@ main(int argc, char *argv[])
 
             /* TODO Dynamical print based on size of v */
             fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < (app->mspace)-1; j++)
+            for (j = 0; j < (app->mspace); j++)
             {
                fprintf(file, "% 1.14e, ", v[j]);
             }
