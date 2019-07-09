@@ -49,6 +49,8 @@
 #include "braid.h"
 #include "braid_test.h"
 #define PI 3.14159265
+#define g(dt,dx) dt/(2*dx)
+#define b(dt,dx,nu) nu*dt/(dx*dx)
 /*--------------------------------------------------------------------------
  * My App and Vector structures
  *--------------------------------------------------------------------------*/
@@ -201,7 +203,7 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 {
 	for (int i = 0; i <= M-1; i++)
 	{
-		v[i] /= alpha*dx;
+		v[i] /= alpha*dx*dt;
 	}
    
 }
