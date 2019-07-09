@@ -213,9 +213,11 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 void
 apply_D(double dt, int M, double *v)
 {
+   //add all arguments to apply_Phi below based on what Isaiah does
+   apply_Phi(v);
 	 for (int i = 0; i <= M-1; i++)
 	 {
-		 v[i] *= -dt;
+		 v[i] *= dt;
 	 }
 }
 
@@ -224,9 +226,11 @@ apply_D(double dt, int M, double *v)
 void
 apply_DAdjoint(double dt, int M, double *v)
 {
+   //add all arguments to apply_PhiAdjoing based on what Isaiah does
+   apply_PhiAdjoint(v);
 	 for (int i = 0; i <= M-1; i++)
 	 {
-		 v[i] /= -1;
+		 v[i] *= dt;
 	 }
 }
 
@@ -911,7 +915,7 @@ main(int argc, char *argv[])
 
    /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
 
-   double *U0 = (double*) malloc( mspace*sizeof(double) );
+   double *U0 = (double*) malloc( ntime*sizeof(double) );
    for(int i=0; i<mspace; i++){
       U0[i]=1;
    }
@@ -1046,8 +1050,9 @@ main(int argc, char *argv[])
          for (i = 0; i < (app->ntime); i++)
          {
             double **w = (app->w);
-
-            vec_axpy(mspace, 1/(alpha*dx),w[i],v );
+            vec_copy(mspace, w[i], v);
+            apply_DAdjoint(dt, mspace, v);
+            vec_scale(mspace, 1/(alpha*dx*dt), v);
 
             /* TODO Dynamical print based on size of v */
             fprintf(file, "%05d: ", (i+1));
