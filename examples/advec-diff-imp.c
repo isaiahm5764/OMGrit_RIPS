@@ -66,6 +66,8 @@ typedef struct _braid_App_struct
 
    double **w;           /* Adjoint vectors at each time point on my proc */
    double *U0;
+   double *ai;
+   double *li;
 
 } my_App;
 
@@ -920,6 +922,18 @@ main(int argc, char *argv[])
       U0[i]=1;
    }
    app->U0       = U0;
+
+   /* Find elements of LU decomposition of A */
+
+   double *ai = (double*) malloc( mspace*sizeof(double) );
+   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
+   ai[0] = 1+2*b(dt,dx,nu);
+   for(int i=1; i<mspace; i++){
+      li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/a[i-1];
+      ai[i] = ai[0]+(b(dt,dx,nu)-g(dt,dx))*li[i-1];
+   }
+   app->ai       = ai;
+   app->li       = li;
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
