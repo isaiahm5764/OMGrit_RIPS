@@ -318,9 +318,7 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
-
    /* No change for index 0 */
-
    if (!homogeneous)
    {
       vec_copy(mspace, u0, utmp);
@@ -662,12 +660,7 @@ main(int argc, char *argv[])
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 9;
-
-   /* Define time domain */
-   ntime  = 1280;              /* Total number of time-steps */
-   tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
+   mspace = 8;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
@@ -678,7 +671,7 @@ main(int argc, char *argv[])
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 7;
-   maxiter        = 20;
+   maxiter        = 300;
    cfactor        = 2;
    tol            = 1.0e-6;
    access_level   = 1;
@@ -783,13 +776,26 @@ main(int argc, char *argv[])
       }
    }
 
-   /* Solve adjoint equations starting at time point t1=dt, recognizing that
-    * braid will label this time point as index=0 instead of 1 */
-   
 
-   dt = (tstop-tstart)/ntime; 
-   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/(2*2*2^max_levels); */
-   /*dt=((double)1/(mspace+1))*((double)1/(mspace+1))/2;*/
+   /* Define the space step for dt computation */
+   dx=(double)1/(mspace+1);
+
+   /* Define time domain */
+   tstart = 0.0;             /* Beginning of time domain */
+   tstop  = 1.0;             /* End of time domain*/
+
+   /* Compute ntime and the time-step based on dx */
+   double Dt = tstop-tstart;
+   double k = max_levels+1-log((dx*dx)/(nu*Dt))/log(2);
+   if (k>0)
+   {
+      ntime = pow(2,(int)k+1);
+   }
+   else
+   {
+      ntime=2;
+   }
+   dt = (tstop-tstart)/(double)ntime;   
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
