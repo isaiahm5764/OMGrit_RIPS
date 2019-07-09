@@ -925,7 +925,7 @@ main(int argc, char *argv[])
    double *li = (double*) malloc( (mspace-1)*sizeof(double) );
    ai[0] = 1+2*b(dt,dx,nu);
    for(int i=1; i<mspace; i++){
-      li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/a[i-1];
+      li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/ai[i-1];
       ai[i] = ai[0]+(b(dt,dx,nu)-g(dt,dx))*li[i-1];
    }
    app->ai       = ai;
