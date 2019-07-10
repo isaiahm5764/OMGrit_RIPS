@@ -56,6 +56,6 @@ X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data t
 ha.plot_surface(X, Y, v_vec)
 ha.set_xlabel('X (position)')
 ha.set_ylabel('t (time)')
-ha.set_zlabel('U value')
+ha.set_zlabel('V value')
 
 plt.show()
