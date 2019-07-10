@@ -138,28 +138,27 @@ vec_scale(int size, double alpha, double *x)
 /* This is the K=[A B C] matrix. It acts on a vector in R^M */
 /* This function requies that M>=3, but this can easily be fixed later */
 void
-apply_Phi(double dt, double dx, double nu, int M, double *u)
-{	 
-	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
-	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
-	 double B = 1 - ((2*nu*dt)/(dx*dx));
-	 double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
-	 double tmp_u_1 = u[0];
-	 double tmp_u_2 = u[1];
-	 double tmp_u_Mm1 = u[M-2];
-	 double tmp_u_M = u[M-1];
-	 
-	 
-	 for (int i = 1; i <= M - 2; i++)
-	 {
-		 u[i] = A*u[i-1] + B*u[i] + C*u[i+1];
-	 }
-	 
-	 /* Deal with the u_1 and u_M vectors seperately */
-	 u[0] = B*tmp_u_1 + C*tmp_u_2;
-	 u[M-1] = A*tmp_u_Mm1 + B*tmp_u_M;
-}
+apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
+{   
+   /* First solve Lw=u (Lw=f) */
+   double *w
+   vec_create(M, &w);
+   double *f
+   vec_create(M, &b);
+   vec_copy(M, u, f);
+   w[0]=u[0]
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=f[i]-l[i-1]*w[i-1];
+   }
+
+   /* Now solve Ux=w */ 
+   double b = g(dt,dx)-b(dy.dx.nu);
+   u[M-1]=w[M-1]/a[M-1];
+   for (int i = M-1; i >= 0; i--)
+   {
+      u[i]=(w[i]-b*u[i+1])/a[i];      
+   }
 
 /*------------------------------------*/
 
