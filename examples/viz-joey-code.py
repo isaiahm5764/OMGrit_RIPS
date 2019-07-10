@@ -15,20 +15,14 @@ v_vec = empty([ntime, mspace])
 
 counti=0
 countj=0
-subnum=9
-with open('OMGritEx2Solved.txt') as f:
-    lines = f.readlines()
+with open('OMGritEx2SolvedU.txt') as f:
+    linesU = f.readlines()
+with open('OMGritEx2SolvedV.txt') as f:
+    linesV = f.readlines()
 for i in range(ntime):
     for j in range(mspace):
-        state_vec[i][j] = lines[(i+1) * (j+1)][subnum:]
-        v_vec[i][j] = lines[2048*10 + ((i+1) * (j+1))][subnum:]
-    if i==10:
-        subnum +=1
-    if i==100:
-        subnum +=1
-    if i==1000:
-        subnum+=1
-
+        state_vec[i][j] = linesU[(i+1)*j][:]
+        v_vec[i][j] = linesV[(i+1)*j][:]
 
 import numpy
 import matplotlib.pyplot as plt
