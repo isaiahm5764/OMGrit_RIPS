@@ -24,23 +24,23 @@ try:
 
 	# Import variables
 	Uvars = M.addVars(((i,j) for i in range(n+1) for j in range(m+1)), name='U')
-	Vvars = M.addVars(((i,j) for i in range(n+1) for j in range(m+1)), name='V')
+	Vvars = M.addVars(((i,j) for i in range(1,n+1) for j in range(1,m)), name='V')
 
 	# add constraints
-	M.addConstrs(Uvars[0,j] == 1 for j in range(m+1)) # initial conditions
-	M.addConstrs(Uvars[i,0] == 0 for i in range(1,n+1)) # boundary conditions
-	M.addConstrs(Uvars[i,m] == 0 for i in range(1,n+1))
+	M.addConstrs(Uvars[0,j] == 1 for j in range(1,m)) # initial conditions
+	M.addConstrs(Uvars[i,0] == 0 for i in range(n+1)) # boundary conditions
+	M.addConstrs(Uvars[i,m] == 0 for i in range(n+1))
 
 	M.addConstr(Uvars[1,1] + Uvars[1,2] - deltat*Vvars[1,1] == B+C)
-	M.addConstrs(Uvars[1,j-1] + Uvars[1,j] + Uvars[1,j+1] - deltat*Vvars[1,j] == A+B+C for j in range(2, m))
-	M.addConstr(Uvars[1,m-1] + Uvars[1,m] - deltat*Vvars[1,m] == A+B)
+	M.addConstrs(Uvars[1,j-1] + Uvars[1,j] + Uvars[1,j+1] - deltat*Vvars[1,j] == A+B+C for j in range(2, m-1))
+	M.addConstr(Uvars[1,m-2] + Uvars[1,m-1] - deltat*Vvars[1,m-1] == A+B)
 	for i in range(2,n+1):
 		M.addConstr(-B*Uvars[i-1,1] - C*Uvars[i-1,2] + Uvars[i,1] + Uvars[i,2] - deltat*Vvars[i,1] == 0)
-		M.addConstrs(-A*Uvars[i-1,j-1] - B*Uvars[i-1,j] - C*Uvars[i-1,j+1] + Uvars[i,j-1] + Uvars[i,j] + Uvars[i,j+1] - deltat*Vvars[i,j] == 0 for j in range(2, m))
-		M.addConstr(-A*Uvars[i-1,m-1] - B*Uvars[i-1,m] + Uvars[i,m-1] + Uvars[i,m] - deltat*Vvars[i,m] == 0)
+		M.addConstrs(-A*Uvars[i-1,j-1] - B*Uvars[i-1,j] - C*Uvars[i-1,j+1] + Uvars[i,j-1] + Uvars[i,j] + Uvars[i,j+1] - deltat*Vvars[i,j] == 0 for j in range(2, m-1))
+		M.addConstr(-A*Uvars[i-1,m-2] - B*Uvars[i-1,m-1] + Uvars[i,m-2] + Uvars[i,m-1] - deltat*Vvars[i,m-1] == 0)
 
 	# Set Objective
-	M.setObjective(0.5*deltat*deltas*sum(Uvars[i,j]*Uvars[i,j] - 2*Uvars[i,j] + 1 + alpha*Vvars[i,j]*Vvars[i,j] for j in range(m+1) for i in range(n+1)))
+	M.setObjective(0.5*deltat*deltas*( sum(Uvars[i,j]*Uvars[i,j] - 2*Uvars[i,j] + 1 for j in range(m+1) for i in range(n+1)) + alpha*sum(Vvars[i,j]*Vvars[i,j] for j in range(1,m) for i in range(1,n+1)) ))
 
 	# Prints constraints
 	M.write("Model.lp")
@@ -53,19 +53,24 @@ try:
 	docv = ""
 	s = 0 # initialize space
 	t = 0 # initialize time
-	flag = True
+	flag = False
 	for v in M.getVars():
 		if flag:
-			docu += str(v.x) + '\n'
-		else:
 			docv += str(v.x) + '\n'
-		s += 1
-		if s >= m:
-			s = 0
-			t += 1
-		if t == 2048:
-			flag = False
-			t = 0
+			s += 1
+			if s == m:
+				s = 1
+				t += 1
+		else:
+			docu += str(v.x) + '\n'
+			s += 1
+			if s > m:
+				s = 0
+				t += 1
+			if t == 2049:
+				flag = True
+				t = 1
+				s = 1
 
 	with open('OMGritEx2SolvedU.txt', 'w') as txtfile:
 		txtfile.write(docu)
