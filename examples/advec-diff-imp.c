@@ -159,7 +159,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    {
       u[i]=(w[i]-b*u[i+1])/a[i];      
    }
-
+}
 /*------------------------------------*/
 
 void
