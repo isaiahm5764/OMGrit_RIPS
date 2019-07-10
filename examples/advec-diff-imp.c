@@ -159,11 +159,12 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    {
       u[i]=(w[i]-b*u[i+1])/a[i];      
    }
+}
 
 /*------------------------------------*/
 
 void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
+apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, double *a)
 {
    /* First solve U^Tw=u (U^Tw=f) */
    double *w
@@ -213,10 +214,10 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 /*------------------------------------*/
 
 void
-apply_D(double dt, int M, double *v)
+apply_D(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_Phi below based on what Isaiah does
-   apply_Phi(v);
+   apply_Phi(dt, dx, nu, M, v, l, a);
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -226,10 +227,10 @@ apply_D(double dt, int M, double *v)
 /*------------------------------------*/
 
 void
-apply_DAdjoint(double dt, int M, double *v)
+apply_DAdjoint(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_PhiAdjoing based on what Isaiah does
-   apply_PhiAdjoint(v);
+   apply_PhiAdjoint(dt, dx, nu, M, v, l, a);
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
