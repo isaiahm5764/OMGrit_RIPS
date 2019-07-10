@@ -775,6 +775,7 @@ main(int argc, char *argv[])
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
+   ntime = 256;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
@@ -891,25 +892,14 @@ main(int argc, char *argv[])
    }
 
 
-   /* Define the space step for dt computation */
+   /* Define the space step */
    dx=(double)1/(mspace+1);
 
-   /* Define time domain */
+   /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
-
-   /* Compute ntime and the time-step based on dx */
-   double Dt = tstop-tstart;
-   double k = max_levels+1-log((dx*dx)/(nu*Dt))/log(2);
-   if (k>0)
-   {
-      ntime = pow(2,(int)k+1);
-   }
-   else
-   {
-      ntime=2;
-   }
-   dt = (tstop-tstart)/(double)ntime;   
+   dt = (tstop-tstart)/ntime; 
+    
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
