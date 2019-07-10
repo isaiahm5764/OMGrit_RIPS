@@ -146,7 +146,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    double *f
    vec_create(M, &b);
    vec_copy(M, u, f);
-   w[0]=u[0]
+   w[0]=f[0];
    for (int i = 1; i < M; i++)
    {
       w[i]=f[i]-l[i-1]*w[i-1];
@@ -165,25 +165,26 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
 void
 apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
 {
-	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
-	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
-    double B = 1 - ((2*nu*dt)/(dx*dx));
-    double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
-	 double tmp_w_1 = w[0];
-	 double tmp_w_2 = w[1];
-	 double tmp_w_Mm1 = w[M-2];
-	 double tmp_w_M = w[M-1];
-	 
-	 
-	 for (int i = 1; i <= M - 2; i++)
-	 {
-		 w[i] = C*w[i-1] + B*w[i] + A*w[i+1];
-	 }
-	 
-	 /* Deal with the u_1 and u_M vectors seperately */
-	 w[0] = B*tmp_w_1 + A*tmp_w_2;
-	 w[M-1] = C*tmp_w_Mm1 + B*tmp_w_M;
+   /* First solve U^Tw=u (U^Tw=f) */
+   double *w
+
+   vec_create(M, &w);
+   double *f
+   vec_create(M, &b);
+   vec_copy(M, u, f);
+   w[0]=f[0]/a[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=(u[i] = w[i-1]*b[i-1])/a[i];
+   }
+
+   /* Now solve L^Tx=w */ 
+   
+   u[M-1]=w[M-1];
+   for (int i = M-1; i >= 0; i--)
+   {
+      u[i]=w[i+1]-l[i+1]*u[i+1];      
+   }
 }
 
 /*------------------------------------*/
