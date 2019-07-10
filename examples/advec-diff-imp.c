@@ -141,49 +141,53 @@ void
 apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
 {   
    /* First solve Lw=u (Lw=f) */
-   double *w
+   double *w;
    vec_create(M, &w);
-   double *f
-   vec_create(M, &b);
+   double *f;
+   vec_create(M, &f);
    vec_copy(M, u, f);
-   w[0]=u[0]
+   w[0]=f[0];
    for (int i = 1; i < M; i++)
    {
       w[i]=f[i]-l[i-1]*w[i-1];
    }
 
    /* Now solve Ux=w */ 
-   double b = g(dt,dx)-b(dy.dx.nu);
+   double b = g(dt,dx)-b(dt,dx,nu);
    u[M-1]=w[M-1]/a[M-1];
    for (int i = M-1; i >= 0; i--)
    {
       u[i]=(w[i]-b*u[i+1])/a[i];      
    }
 }
+
 /*------------------------------------*/
 
 void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
+apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, double *a)
 {
-	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
-	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
-    double B = 1 - ((2*nu*dt)/(dx*dx));
-    double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
-	 double tmp_w_1 = w[0];
-	 double tmp_w_2 = w[1];
-	 double tmp_w_Mm1 = w[M-2];
-	 double tmp_w_M = w[M-1];
-	 
-	 
-	 for (int i = 1; i <= M - 2; i++)
-	 {
-		 w[i] = C*w[i-1] + B*w[i] + A*w[i+1];
-	 }
-	 
-	 /* Deal with the u_1 and u_M vectors seperately */
-	 w[0] = B*tmp_w_1 + A*tmp_w_2;
-	 w[M-1] = C*tmp_w_Mm1 + B*tmp_w_M;
+   /* First solve U^Tw=u (U^Tw=f) */
+
+   /* Need to change this w to some other letter becuase w is already passed as a parameter of this function */
+   double *w;
+
+   vec_create(M, &w);
+   double *f;
+   vec_create(M, &f);
+   vec_copy(M, u, f);
+   w[0]=f[0]/a[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=(u[i] = w[i-1]*b[i-1])/a[i];
+   }
+
+   /* Now solve L^Tx=w */ 
+   
+   u[M-1]=w[M-1];
+   for (int i = M-1; i >= 0; i--)
+   {
+      u[i]=w[i+1]-l[i+1]*u[i+1];      
+   }
 }
 
 /*------------------------------------*/
@@ -212,10 +216,10 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 /*------------------------------------*/
 
 void
-apply_D(double dt, int M, double *v)
+apply_D(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_Phi below based on what Isaiah does
-   apply_Phi(v);
+   apply_Phi(dt, dx, nu, M, v, l, a);
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -225,10 +229,10 @@ apply_D(double dt, int M, double *v)
 /*------------------------------------*/
 
 void
-apply_DAdjoint(double dt, int M, double *v)
+apply_DAdjoint(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_PhiAdjoing based on what Isaiah does
-   apply_PhiAdjoint(v);
+   apply_PhiAdjoint(dt, dx, nu, M, v, l, a);
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -259,6 +263,8 @@ my_TriResidual(braid_App       app,
    int     level, index;
    int     mspace = (app->mspace);
    double *u0 = (app->U0);
+   double *li = (app->li);
+   double *ai = (app->ai);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -291,9 +297,9 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
    vec_copy(mspace, (r->values), utmp);
-   apply_DAdjoint(dt, mspace, utmp);
+   apply_DAdjoint(dt, dx, nu, mspace, utmp, li, ai);
    apply_Vinv(dt, dx, alpha, mspace, utmp);
-   apply_D(dt, mspace, utmp);
+   apply_D(dt, dx, nu, mspace, utmp, li, ai);
    vec_axpy(mspace, 1.0, utmp, rtmp);
 
    /* rtmp = rtmp + Phi_i U_{i-1}^{-1} Phi_i^T u */
@@ -301,9 +307,9 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (r->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
@@ -312,7 +318,7 @@ my_TriResidual(braid_App       app,
    {
       vec_copy(mspace, (uleft->values), utmp);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
    
@@ -320,7 +326,7 @@ my_TriResidual(braid_App       app,
    if (uright != NULL)
    {
       vec_copy(mspace, (uright->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
       apply_Uinv(dt, dx, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
@@ -332,7 +338,7 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace, -1.0, utmp, rtmp);
 
       vec_copy(mspace, u0,utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
+      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, 1.0, utmp, rtmp); 
 
    }
@@ -1023,7 +1029,7 @@ main(int argc, char *argv[])
             {
                vec_copy(mspace, w[i+1], u);
                vec_copy(mspace, w[i], u1);
-               apply_PhiAdjoint(dt, dx, nu, mspace, u);
+               apply_PhiAdjoint(dt, dx, nu, mspace, u, li, ai);
                apply_Uinv(dt, dx, mspace, u);
                apply_Uinv(dt, dx, mspace, u1);
                vec_axpy(mspace, -1.0, u1, u);
@@ -1064,7 +1070,7 @@ main(int argc, char *argv[])
          {
             double **w = (app->w);
             vec_copy(mspace, w[i], v);
-            apply_DAdjoint(dt, mspace, v);
+            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
             vec_scale(mspace, 1/(alpha*dx*dt), v);
 
             /* TODO Dynamical print based on size of v */

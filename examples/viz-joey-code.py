@@ -6,36 +6,32 @@ from os import sys
 mspace=10
 ntime=2048
 #create the t mesh
-tmesh = linspace(0,1.0,ntime)
-xmesh = linspace(0,1.0,mspace)
+tmesh = linspace(0,1.0,ntime+1)
+xmesh = linspace(0,1.0,mspace+1)
 ##
 
-state_vec = empty([ntime, mspace])
-v_vec = empty([ntime, mspace])
+state_vec = empty([ntime+1, mspace+1])
+v_vec = empty([ntime+1, mspace+1])
 
 counti=0
 countj=0
-subnum=9
-with open('OMGritEx2Solved.txt') as f:
-    lines = f.readlines()
-for i in range(ntime):
-    for j in range(mspace):
-        state_vec[i][j] = lines[(i+1) * (j+1)][subnum:]
-        v_vec[i][j] = lines[2048*10 + ((i+1) * (j+1))][subnum:]
-    if i==10:
-        subnum +=1
-    if i==100:
-        subnum +=1
-    if i==1000:
-        subnum+=1
-
+with open('OMGritEx2SolvedU.txt') as f:
+    linesU = f.readlines()
+with open('OMGritEx2SolvedV.txt') as f:
+    linesV = f.readlines()
+for i in range(ntime+1):
+    for j in range(mspace+1):
+        state_vec[i][j] = linesU[mspace*i + j][:]
+for i in range(1,ntime+1):
+    for j in range(1,mspace):
+        v_vec[i][j] = linesV[(mspace-1)*(i-1)+j-1][:]
 
 import numpy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # Set up grid and test data
-nx, ny = mspace, ntime
+nx, ny = mspace+1, ntime+1
 x = range(nx)
 y = range(ny)
 
