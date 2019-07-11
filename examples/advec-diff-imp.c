@@ -164,7 +164,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
 /*------------------------------------*/
 
 void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, double *a)
+apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, double *a)
 {
    /* First solve U^Tw=u (U^Tw=f) */
 
@@ -260,7 +260,7 @@ void
 apply_D(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_Phi below based on what Isaiah does
-   apply_Phi(dt, dx, nu, M, v, l, a);
+   /* apply_Phi(dt, dx, nu, M, v, l, a); */
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -273,7 +273,7 @@ void
 apply_DAdjoint(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_PhiAdjoing based on what Isaiah does
-   apply_PhiAdjoint(dt, dx, nu, M, v, l, a);
+   /* apply_PhiAdjoint(dt, dx, nu, M, v, l, a); */
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -331,8 +331,10 @@ my_TriResidual(braid_App       app,
 
    /* Compute action of center block */
 
-   /* rtmp = U_i^{-1} u */
+   /* rtmp = U_i^{-1}AA^T u */
    vec_copy(mspace, (r->values), utmp);
+   apply_A(dt, dx, nu, mspace, utmp);
+   apply_Aadjoint(dt, dx, nu, mspace, utmp);
    apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
@@ -348,9 +350,7 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (r->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
@@ -358,8 +358,8 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (uleft->values), utmp);
+      apply_Aadjoint(dt, dx, nu, mspace, utmp);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
    
@@ -367,7 +367,7 @@ my_TriResidual(braid_App       app,
    if (uright != NULL)
    {
       vec_copy(mspace, (uright->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
+      apply_A(dt, dx, nu, mspace, utmp);
       apply_Uinv(dt, dx, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
@@ -376,11 +376,11 @@ my_TriResidual(braid_App       app,
    if (!homogeneous)
    {
       vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
 
       vec_copy(mspace, u0,utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
-      vec_axpy(mspace, 1.0, utmp, rtmp); 
+      apply_A(dt, dx, nu, mspace, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp); 
 
    }
 
