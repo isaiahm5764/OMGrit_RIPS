@@ -444,29 +444,14 @@ my_TriSolve(braid_App       app,
 
    /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
     *
-    * Using [\tilde{C_i}] = [ (2/dx*dt + dt/alpha*dx)*I_M ]
-    * If we are looking at r_1, we can use the exact value of [C_[1]]=[(1+dt^2/alpha)*I_M]
+    * Using [\tilde{C_i}] = 2AA^T
+    * 
     */
 
    
    rtmp = (u->values);
-   if (uleft != NULL)
-   {
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
-      }
-   }
-   else
-   {
-      /* At the leftmost point, use a different center coefficient approximation */
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( (1 + dt*dt/alpha)/(dx*dt) );
-      }
-   }
-
-
+   rtmp = 0.5*apply_Phi(dt, dx, nu, mspace, -rtmp, li, ai);
+   rtmp = apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
 
 
    /* Complete residual update */
