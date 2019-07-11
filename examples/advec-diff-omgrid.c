@@ -828,7 +828,7 @@ main(int argc, char *argv[])
       else if ( strcmp(argv[arg_index], "-nu") == 0 )
       {
          arg_index++;
-         nu = atoi(argv[arg_index++]);
+         nu = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-alpha") == 0 )
       {
@@ -886,16 +886,7 @@ main(int argc, char *argv[])
    tstop  = 1.0;             /* End of time domain*/
 
    /* Compute ntime and the time-step based on dx */
-   double Dt = tstop-tstart;
-   double k = max_levels+1-log((dx*dx)/(nu*Dt))/log(2);
-   if (k>0)
-   {
-      ntime = pow(2,(int)k+1);
-   }
-   else
-   {
-      ntime=2;
-   }
+
    dt = (tstop-tstart)/(double)ntime;   
 
    /* Set up the app structure */
@@ -911,7 +902,12 @@ main(int argc, char *argv[])
 
    double *U0 = (double*) malloc( mspace*sizeof(double) );
    for(int i=0; i<mspace; i++){
+      if(i<mspace/2-1){
       U0[i]=1;
+      }
+      else{
+         U0[i]=0;
+      }
    }
    app->U0       = U0;
 
