@@ -416,7 +416,9 @@ my_TriSolve(braid_App       app,
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
-   double alpha = (app->alpha);
+   double nu = (app->nu);
+   double *li = (app->li);
+   double *ai = (app->ai);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -448,10 +450,11 @@ my_TriSolve(braid_App       app,
     * 
     */
 
-   
    rtmp = (u->values);
-   rtmp = 0.5*apply_Phi(dt, dx, nu, mspace, -rtmp, li, ai);
-   rtmp = apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
+   vec_scale(mspace, -1.0, rtmp);
+   apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
+   apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
+   vec_scale(mspace, 0.5, rtmp);
 
 
    /* Complete residual update */
@@ -943,7 +946,11 @@ main(int argc, char *argv[])
       U0[i]=1;
    }
 
-   for(int i=mspace/2; )
+   for(int i=mspace/2; i<mspace; i++)
+   {
+      U0[i]=0;
+   }
+
    app->U0       = U0;
 
    /* Find elements of LU decomposition of A */
