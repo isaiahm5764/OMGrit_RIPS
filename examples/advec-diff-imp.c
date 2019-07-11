@@ -873,7 +873,7 @@ main(int argc, char *argv[])
       else if ( strcmp(argv[arg_index], "-nu") == 0 )
       {
          arg_index++;
-         nu = atoi(argv[arg_index++]);
+         nu = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-alpha") == 0 )
       {
