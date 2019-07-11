@@ -350,6 +350,20 @@ my_TriResidual(braid_App       app,
 
 /* Solve A(u) = f */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int
 my_TriSolve(braid_App       app,
             braid_Vector    uleft,

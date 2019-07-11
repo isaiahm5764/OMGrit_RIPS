@@ -155,9 +155,9 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    }
 
    /* Now solve Ux=w */ 
-   double b = g(dt,dx)-b(dt,dx,nu);
+   double b = g(dt,dx)-b(dt, dx, nu);
    u[M-1]=w[M-1]/a[M-1];
-   for (int i = M-1; i >= 0; i--)
+   for (int i = M-2; i >= 0; i--)
    {
       u[i]=(w[i]-b*u[i+1])/a[i];      
    }
@@ -166,7 +166,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
 /*------------------------------------*/
 
 void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, double *a)
+apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, double *a)
 {
    /* First solve U^Tw=u (U^Tw=f) */
 
@@ -177,19 +177,60 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, d
    double *f;
    vec_create(M, &f);
    vec_copy(M, u, f);
+   double b = g(dt,dx)-b(dt, dx, nu);
    w[0]=f[0]/a[0];
    for (int i = 1; i < M; i++)
    {
-      w[i]=(u[i] = w[i-1]*b[i-1])/a[i];
+      w[i]=(f[i]-w[i-1]*b)/a[i];
    }
 
    /* Now solve L^Tx=w */ 
    
    u[M-1]=w[M-1];
-   for (int i = M-1; i >= 0; i--)
+   for (int i = M-2; i >= 0; i--)
    {
       u[i]=w[i+1]-l[i+1]*u[i+1];      
    }
+}
+
+/*------------------------------------*/
+
+void
+apply_A(double dt, double dx, double nu, int M, double *u)
+{
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+2*b(dt,dx,nu);
+   double C = g(dt,dx)-b(dt,dx,nu);
+   double *uold;
+   vec_create(M, &uold);
+   vec_copy(M, u, uold);
+   u[0]=B*uold[0]+C*uold[1];
+   u[M-1]=A*uold[M-2]+B*uold[M-1];
+   for(int i = 1; i <= M-2; i++)
+   {
+      u[i]=A*uold[i-1]+B*uold[i]+C*uold[i+1];
+   }
+
+}
+
+/*------------------------------------*/
+
+void
+apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
+{
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+2*b(dt,dx,nu);
+   double C = g(dt,dx)-b(dt,dx,nu);
+   double *uold;
+   vec_create(M, &uold);
+   vec_copy(M, u, uold);
+   u[0]=B*uold[0]+A*uold[1];
+   u[M-1]=C*uold[M-2]+B*uold[M-1];
+   for(int i = 1; i <= M-2; i++)
+   {
+      u[i]=C*uold[i-1]+B*uold[i]+A*uold[i+1];
+   }
+
 }
 
 /*------------------------------------*/
@@ -221,7 +262,7 @@ void
 apply_D(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_Phi below based on what Isaiah does
-   apply_Phi(dt, dx, nu, M, v, l, a);
+   /* apply_Phi(dt, dx, nu, M, v, l, a); */
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -234,7 +275,7 @@ void
 apply_DAdjoint(double dt, double dx, double nu, int M, double *v, double *l, double *a)
 {
    //add all arguments to apply_PhiAdjoing based on what Isaiah does
-   apply_PhiAdjoint(dt, dx, nu, M, v, l, a);
+   /* apply_PhiAdjoint(dt, dx, nu, M, v, l, a); */
 	 for (int i = 0; i <= M-1; i++)
 	 {
 		 v[i] *= dt;
@@ -292,8 +333,10 @@ my_TriResidual(braid_App       app,
 
    /* Compute action of center block */
 
-   /* rtmp = U_i^{-1} u */
+   /* rtmp = U_i^{-1}AA^T u */
    vec_copy(mspace, (r->values), utmp);
+   apply_A(dt, dx, nu, mspace, utmp);
+   apply_Aadjoint(dt, dx, nu, mspace, utmp);
    apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
@@ -309,9 +352,7 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (r->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
@@ -319,8 +360,8 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(mspace, (uleft->values), utmp);
+      apply_Aadjoint(dt, dx, nu, mspace, utmp);
       apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
    
@@ -328,7 +369,7 @@ my_TriResidual(braid_App       app,
    if (uright != NULL)
    {
       vec_copy(mspace, (uright->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, li, ai);
+      apply_A(dt, dx, nu, mspace, utmp);
       apply_Uinv(dt, dx, mspace, utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
    }
@@ -337,11 +378,11 @@ my_TriResidual(braid_App       app,
    if (!homogeneous)
    {
       vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
 
       vec_copy(mspace, u0,utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp, li, ai);
-      vec_axpy(mspace, 1.0, utmp, rtmp); 
+      apply_A(dt, dx, nu, mspace, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp); 
 
    }
 
@@ -377,7 +418,9 @@ my_TriSolve(braid_App       app,
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
-   double alpha = (app->alpha);
+   double nu = (app->nu);
+   double *li = (app->li);
+   double *ai = (app->ai);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -405,29 +448,15 @@ my_TriSolve(braid_App       app,
 
    /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
     *
-    * Using [\tilde{C_i}] = [ (2/dx*dt + dt/alpha*dx)*I_M ]
-    * If we are looking at r_1, we can use the exact value of [C_[1]]=[(1+dt^2/alpha)*I_M]
+    * Using [\tilde{C_i}] = 2AA^T
+    * 
     */
 
-   
    rtmp = (u->values);
-   if (uleft != NULL)
-   {
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
-      }
-   }
-   else
-   {
-      /* At the leftmost point, use a different center coefficient approximation */
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( (1 + dt*dt/alpha)/(dx*dt) );
-      }
-   }
-
-
+   vec_scale(mspace, -1.0, rtmp);
+   apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
+   apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
+   vec_scale(mspace, 0.5, rtmp);
 
 
    /* Complete residual update */
@@ -777,6 +806,7 @@ main(int argc, char *argv[])
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
+   ntime = 256;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
@@ -893,25 +923,14 @@ main(int argc, char *argv[])
    }
 
 
-   /* Define the space step for dt computation */
+   /* Define the space step */
    dx=(double)1/(mspace+1);
 
-   /* Define time domain */
+   /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
-
-   /* Compute ntime and the time-step based on dx */
-   double Dt = tstop-tstart;
-   double k = max_levels+1-log((dx*dx)/(nu*Dt))/log(2);
-   if (k>0)
-   {
-      ntime = pow(2,(int)k+1);
-   }
-   else
-   {
-      ntime=2;
-   }
-   dt = (tstop-tstart)/(double)ntime;   
+   dt = (tstop-tstart)/ntime; 
+    
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
@@ -922,12 +941,18 @@ main(int argc, char *argv[])
    app->alpha    = alpha;
    app->w        = NULL;
 
-   /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
+   /* Set this to whatever u0 is. */
 
    double *U0 = (double*) malloc( ntime*sizeof(double) );
-   for(int i=0; i<mspace; i++){
+   for(int i=0; i<mspace/2; i++){
       U0[i]=1;
    }
+
+   for(int i=mspace/2; i<mspace; i++)
+   {
+      U0[i]=0;
+   }
+
    app->U0       = U0;
 
    /* Find elements of LU decomposition of A */
@@ -1034,7 +1059,7 @@ main(int argc, char *argv[])
             {
                vec_copy(mspace, w[i+1], u);
                vec_copy(mspace, w[i], u1);
-               apply_PhiAdjoint(dt, dx, nu, mspace, u, li, ai);
+               apply_Aadjoint(dt, dx, nu, mspace, u1);
                apply_Uinv(dt, dx, mspace, u);
                apply_Uinv(dt, dx, mspace, u1);
                vec_axpy(mspace, -1.0, u1, u);
@@ -1042,6 +1067,7 @@ main(int argc, char *argv[])
             else
             {
                vec_copy(mspace, w[i], u);
+               apply_Aadjoint(dt, dx, nu, mspace, u);
                apply_Uinv(dt,dx,mspace,u);
                vec_scale(mspace, -1.0, u);
             }
@@ -1076,7 +1102,8 @@ main(int argc, char *argv[])
             double **w = (app->w);
             vec_copy(mspace, w[i], v);
             apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
-            vec_scale(mspace, 1/(alpha*dx*dt), v);
+            apply_Vinv(dt, dx, alpha, mspace,v);
+            vec_scale(mspace, -1.0, v);
 
             /* TODO Dynamical print based on size of v */
             fprintf(file, "%05d: ", (i+1));
