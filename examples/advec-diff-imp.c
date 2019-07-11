@@ -335,8 +335,8 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = U_i^{-1}AA^T u */
    vec_copy(mspace, (r->values), utmp);
-   apply_A(dt, dx, nu, mspace, utmp);
    apply_Aadjoint(dt, dx, nu, mspace, utmp);
+   apply_A(dt, dx, nu, mspace, utmp);
    apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
