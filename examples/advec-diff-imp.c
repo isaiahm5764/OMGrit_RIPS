@@ -194,6 +194,46 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, d
 /*------------------------------------*/
 
 void
+apply_A(double dt, double dx, double nu, int M, double *u)
+{
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+2*b(dt,dx,nu);
+   double C = g(dt,dx)-b(dt,dx,nu);
+   double *uold;
+   vec_create(M, &uold);
+   vec_copy(M, u, uold);
+   u[0]=B*uold[0]+C*uold[1];
+   u[M-1]=A*uold[M-2]+B*uold[M-1];
+   for(int i = 1; i <= M-2; i++)
+   {
+      u[i]=A*uold[i-1]+B*uold[i]+C*uold[i+1];
+   }
+
+}
+
+/*------------------------------------*/
+
+void
+apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
+{
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+2*b(dt,dx,nu);
+   double C = g(dt,dx)-b(dt,dx,nu);
+   double *uold;
+   vec_create(M, &uold);
+   vec_copy(M, u, uold);
+   u[0]=B*uold[0]+A*uold[1];
+   u[M-1]=C*uold[M-2]+B*uold[M-1];
+   for(int i = 1; i <= M-2; i++)
+   {
+      u[i]=C*uold[i-1]+B*uold[i]+A*uold[i+1];
+   }
+
+}
+
+/*------------------------------------*/
+
+void
 apply_Uinv(double dt, double dx, int M, double *u)
 {
    for (int i = 0; i <= M-1; i++)
