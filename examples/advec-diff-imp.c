@@ -951,12 +951,14 @@ main(int argc, char *argv[])
    app->alpha    = alpha;
    app->w        = NULL;
 
-   /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
+   /* Set this to whatever u0 is. */
 
    double *U0 = (double*) malloc( ntime*sizeof(double) );
-   for(int i=0; i<mspace; i++){
+   for(int i=0; i<mspace/2; i++){
       U0[i]=1;
    }
+
+   for(int i=mspace/2; )
    app->U0       = U0;
 
    /* Find elements of LU decomposition of A */
@@ -1102,7 +1104,8 @@ main(int argc, char *argv[])
             double **w = (app->w);
             vec_copy(mspace, w[i], v);
             apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
-            vec_scale(mspace, 1/(alpha*dx*dt), v);
+            apply_Vinv(dt, dx, alpha, mspace,v);
+            vec_scale(mspace, -1.0, v);
 
             /* TODO Dynamical print based on size of v */
             fprintf(file, "%05d: ", (i+1));
