@@ -144,7 +144,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    double *w
    vec_create(M, &w);
    double *f
-   vec_create(M, &b);
+   vec_create(M, &f);
    vec_copy(M, u, f);
    w[0]=f[0];
    for (int i = 1; i < M; i++)
@@ -153,9 +153,9 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    }
 
    /* Now solve Ux=w */ 
-   double b = g(dt,dx)-b(dy.dx.nu);
+   double b = g(dt,dx)-b(dt, dx, nu);
    u[M-1]=w[M-1]/a[M-1];
-   for (int i = M-1; i >= 0; i--)
+   for (int i = M-2; i >= 0; i--)
    {
       u[i]=(w[i]-b*u[i+1])/a[i];      
    }
@@ -171,18 +171,19 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w, double *l, d
 
    vec_create(M, &w);
    double *f
-   vec_create(M, &b);
+   vec_create(M, &f);
    vec_copy(M, u, f);
+   double b = g(dt,dx)-b(dt, dx, nu);
    w[0]=f[0]/a[0];
    for (int i = 1; i < M; i++)
    {
-      w[i]=(u[i] = w[i-1]*b[i-1])/a[i];
+      w[i]=(f[i]-w[i-1]*b)/a[i];
    }
 
    /* Now solve L^Tx=w */ 
    
    u[M-1]=w[M-1];
-   for (int i = M-1; i >= 0; i--)
+   for (int i = M-2; i >= 0; i--)
    {
       u[i]=w[i+1]-l[i+1]*u[i+1];      
    }
