@@ -451,7 +451,7 @@ my_TriSolve(braid_App       app,
    
    rtmp = (u->values);
    rtmp = 0.5*apply_Phi(dt, dx, nu, mspace, -rtmp, li, ai);
-   rtmp = apply_PhiAdjoint(dt, dx, nu, mspace, -rtmp, li, ai);
+   rtmp = apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
 
 
    /* Complete residual update */
