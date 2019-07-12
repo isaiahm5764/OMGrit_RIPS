@@ -335,8 +335,8 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = U_i^{-1}AA^T u */
    vec_copy(mspace, (r->values), utmp);
-   apply_A(dt, dx, nu, mspace, utmp);
    apply_Aadjoint(dt, dx, nu, mspace, utmp);
+   apply_A(dt, dx, nu, mspace, utmp);
    apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
@@ -453,10 +453,9 @@ my_TriSolve(braid_App       app,
     */
 
    rtmp = (u->values);
-   vec_scale(mspace, -1.0, rtmp);
+   vec_scale(mspace, -0.5*dx*dt, rtmp);
    apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
    apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
-   vec_scale(mspace, .5, rtmp);
 
 
    /* Complete residual update */
