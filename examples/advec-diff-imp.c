@@ -137,7 +137,7 @@ vec_scale(int size, double alpha, double *x)
  * KKT component routines
  *--------------------------------------------------------------------------*/
 
-/* This applies A^-1 to a vector in R^M */
+/* This is the K=[A B C] matrix. It acts on a vector in R^M */
 /* This function requies that M>=3, but this can easily be fixed later */
 void
 apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
@@ -189,7 +189,7 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
    u[M-1]=w[M-1];
    for (int i = M-2; i >= 0; i--)
    {
-      u[i]=w[i]-l[i]*u[i+1];      
+      u[i]=w[i+1]-l[i+1]*u[i+1];      
    }
 }
 
@@ -456,7 +456,6 @@ my_TriSolve(braid_App       app,
    vec_scale(mspace, -0.5*dx*dt, rtmp);
    apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
    apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
-   
 
 
    /* Complete residual update */
@@ -602,123 +601,6 @@ my_Access(braid_App          app,
       vec_create(mspace, &(app->w[index]));
       vec_copy(mspace, (u->values), (app->w[index]));
    }
-
-   /* Code below allows access to the solution value after certain iterations. This is then printed to an out file so the solution evolution over time can be seen.*/
-
-   //       int  iter;
-   // braid_AccessStatusGetIter(astatus, &iter);
-   // if(iter%50==10){
-   // {
-   //       char  filename[255];
-   //       FILE *file;
-   //       int   i,j;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.w", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for(j=0; j <mspace; j++){
-   //             if(j==mspace-1){
-   //                fprintf(file, "% 1.14e", w[i][j]);
-   //             }
-   //             else{
-   //                fprintf(file, "% 1.14e, ", w[i][j]);
-   //             }
-   //          }
-   //          fprintf(file, "\n");
-   //       }
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-
-   //    /* Compute state u from adjoint w and print to file */
-   //    /* Not sure if this is completely correct - tom */
-   //    {
-   //       char    filename[255];
-   //       FILE   *file;
-   //       int     i, j;
-   //       double *u;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.u", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       vec_create(mspace, &u);
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-
-   //          if ((i+1) < (app->ntime))
-   //          {
-   //             vec_copy(mspace, w[i+1], u);
-   //             apply_PhiAdjoint(dt, dx, nu, mspace, u);
-   //             apply_Uinv(dt, dx, mspace, u);
-   //             vec_axpy(mspace, -1.0, w[i], u);
-   //          }
-   //          else
-   //          {
-   //             vec_copy(mspace, w[i], u);
-   //             vec_scale(mspace, -1.0, u);
-   //          }
-   //          vec_axpy(mspace, -1.0, U0, u);
-
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for (j = 0; j < mspace; j++)
-   //          {
-   //             fprintf(file, "% 1.14e, ", u[j]);
-   //          }
-   //          fprintf(file, "% 1.14e\n", u[mspace-1]);
-   //       }
-   //       vec_destroy(u);
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-
-   //    /* Compute control v from adjoint w and print to file */
-   //    /* V = (1/(alpha*dx))*aW */
-   //    {
-   //       char    filename[255];
-   //       FILE   *file;
-   //       int     i,j;
-   //       double *v;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.v", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       vec_create((app->mspace), &v);
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-
-   //          vec_axpy(mspace, 1/(alpha*dx),w[i],v );
-
-   //          /* TODO Dynamical print based on size of v */
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for (j = 0; j < (app->mspace); j++)
-   //          {
-   //             fprintf(file, "% 1.14e, ", v[j]);
-   //          }
-   //          fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
-   //       }
-   //       vec_destroy(v);
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-   // }
-//   {
-//      char  filename[255];
-//      FILE *file;
-//      int  iter;
-//      braid_AccessStatusGetIter(astatus, &iter);
-//
-//      braid_AccessStatusGetTIndex(astatus, &index);
-//      sprintf(filename, "%s.%02d.%04d.%03d", "ex-04.out", iter, index, app->myid);
-//      file = fopen(filename, "w");
-//      fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
-//      fflush(file);
-//      fclose(file);
-//   }
-
-
    return 0;
 }
 
@@ -813,10 +695,10 @@ main(int argc, char *argv[])
    nu    = 2;                /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 5;
+   max_levels     = 30;
    min_coarse     = 1;
    nrelax         = 1;
-   nrelaxc        = 7;
+   nrelaxc        = 30;
    maxiter        = 300;
    cfactor        = 2;
    tol            = 1.0e-6;
@@ -878,7 +760,7 @@ main(int argc, char *argv[])
       else if ( strcmp(argv[arg_index], "-alpha") == 0 )
       {
          arg_index++;
-         alpha = atoi(argv[arg_index++]);
+         alpha = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-num") == 0 )
       {
