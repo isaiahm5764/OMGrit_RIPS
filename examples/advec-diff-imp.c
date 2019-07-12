@@ -137,7 +137,7 @@ vec_scale(int size, double alpha, double *x)
  * KKT component routines
  *--------------------------------------------------------------------------*/
 
-/* This applies A^-1 to a vector in R^M */
+/* This is the K=[A B C] matrix. It acts on a vector in R^M */
 /* This function requies that M>=3, but this can easily be fixed later */
 void
 apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
@@ -170,6 +170,7 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
 {
    /* First solve U^Tw=u (U^Tw=f) */
 
+   /* Need to change this w to some other letter becuase w is already passed as a parameter of this function */
    double *w;
 
    vec_create(M, &w);
@@ -334,8 +335,8 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = U_i^{-1}AA^T u */
    vec_copy(mspace, (r->values), utmp);
-   apply_Aadjoint(dt, dx, nu, mspace, utmp);
    apply_A(dt, dx, nu, mspace, utmp);
+   apply_Aadjoint(dt, dx, nu, mspace, utmp);
    apply_Uinv(dt, dx, mspace, utmp);
    vec_copy(mspace, utmp, rtmp);
 
@@ -452,9 +453,10 @@ my_TriSolve(braid_App       app,
     */
 
    rtmp = (u->values);
-   vec_scale(mspace, -0.5*dx*dt, rtmp);
+   vec_scale(mspace, -1.0*dx*dt, rtmp);
    apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
    apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
+   vec_scale(mspace, .5, rtmp);
 
 
    /* Complete residual update */
@@ -907,73 +909,18 @@ main(int argc, char *argv[])
 
       /* Compute state u from adjoint w and print to file */
       /* Not sure if this is completely correct - tom */
-      {
-         char    filename[255], filename1[255];
-         FILE   *file;
-         int     i, j;
-         double *u, *u1;
-
-         sprintf(filename1, "%s.%03d", "advec-diff-imp.out.u0", (app->myid));
-         file = fopen(filename1, "w");
-         vec_create(mspace, &u);
-         vec_copy(mspace, U0, u);
-         for (j = 0; j < mspace; j++)
-            {
-               if(j!=mspace-1){
-                  fprintf(file, "% 1.14e, ", u[j]);
-               }
-               else{
-                  fprintf(file, "% 1.14e", u[j]);
-               }
-            }
-         vec_destroy(u);
-
-         sprintf(filename, "%s.%03d", "advec-diff-imp.out.u", (app->myid));
-         file = fopen(filename, "w");
-         vec_create(mspace, &u);
-         vec_create(mspace, &u1);
-         double **w = (app->w);
-         for (i = 0; i < (app->ntime); i++)
-         {
-
-            if ((i+1) < (app->ntime))
-            {
-               vec_copy(mspace, w[i+1], u);
-               vec_copy(mspace, w[i], u1);
-               apply_Aadjoint(dt, dx, nu, mspace, u1);
-               apply_Uinv(dt, dx, mspace, u);
-               apply_Uinv(dt, dx, mspace, u1);
-               vec_axpy(mspace, -1.0, u1, u);
-            }
-            else
-            {
-               vec_copy(mspace, w[i], u);
-               apply_Aadjoint(dt, dx, nu, mspace, u);
-               apply_Uinv(dt,dx,mspace,u);
-               vec_scale(mspace, -1.0, u);
-            }
-            vec_axpy(mspace, 1.0, u, U0);
-
-            fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < mspace; j++)
-            {
-               fprintf(file, "% 1.14e, ", U0[j]);
-            }
-            fprintf(file, "% 1.14e\n", u[mspace-1]);
-         }
-         vec_destroy(u);
-         vec_destroy(u1);
-         fflush(file);
-         fclose(file);
-      }
+      
 
       /* Compute control v from adjoint w and print to file */
-      /* V = (1/(alpha*dx))*aW */
-      {
+      /* V= (1/(alpha*dx))*aW */
+      
          char    filename[255];
          FILE   *file;
          int     i,j;
          double *v;
+
+         double **vs = (double **)malloc(ntime * sizeof(double*));
+         for(int i = 0; i < ntime; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
 
          sprintf(filename, "%s.%03d", "advec-diff-imp.out.v", (app->myid));
          file = fopen(filename, "w");
@@ -984,12 +931,12 @@ main(int argc, char *argv[])
             vec_copy(mspace, w[i], v);
             apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
             apply_Vinv(dt, dx, alpha, mspace,v);
-            vec_scale(mspace, -1.0, v);
 
             /* TODO Dynamical print based on size of v */
             fprintf(file, "%05d: ", (i+1));
             for (j = 0; j < (app->mspace); j++)
             {
+               vs[i][j] = v[j];
                fprintf(file, "% 1.14e, ", v[j]);
             }
             fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
@@ -997,8 +944,60 @@ main(int argc, char *argv[])
          vec_destroy(v);
          fflush(file);
          fclose(file);
-      }
+      
+
+         char filename1[255];
+         double *us;
+
+         sprintf(filename1, "%s.%03d", "advec-diff-imp.out.u0", (app->myid));
+         file = fopen(filename1, "w");
+         vec_create(mspace, &us);
+         vec_copy(mspace, U0, us);
+         for (j = 0; j < mspace; j++)
+            {
+               if(j!=mspace-1){
+                  fprintf(file, "% 1.14e, ", us[j]);
+               }
+               else{
+                  fprintf(file, "% 1.14e", us[j]);
+               }
+            }
+         vec_destroy(us);
+
+         sprintf(filename, "%s.%03d", "advec-diff-imp.out.u", (app->myid));
+         file = fopen(filename, "w");
+         double **u = (double **)malloc(ntime * sizeof(double*));
+         for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+
+         for (i = 0; i < (app->ntime); i++)
+         {
+            double *vtemp = vs[i];
+            if(i==0){
+               vec_scale(mspace, dt, vtemp);
+               vec_axpy(mspace, 1.0, U0, vtemp);
+               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+               vec_copy(mspace, vtemp, u[i]);
+            }
+            else{
+               vec_scale(mspace, dt, vtemp);
+               vec_axpy(mspace, 1.0, u[i-1], vtemp);
+               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+               vec_copy(mspace, vtemp, u[i]);
+            }
+
+            fprintf(file, "%05d: ", (i+1));
+            for (j = 0; j < mspace; j++)
+            {
+               fprintf(file, "% 1.14e, ", u[i][j]);
+            }
+            fprintf(file, "% 1.14e\n", u[i][mspace-1]);
+         }
+         fflush(file);
+         fclose(file);
+      
    }
+
+
 
    free(app);
    
