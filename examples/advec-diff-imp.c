@@ -1059,7 +1059,7 @@ main(int argc, char *argv[])
             {
                vec_copy(mspace, w[i+1], u);
                vec_copy(mspace, w[i], u1);
-               apply_PhiAdjoint(dt, dx, nu, mspace, u, li, ai);
+               apply_Aadjoint(dt, dx, nu, mspace, u1);
                apply_Uinv(dt, dx, mspace, u);
                apply_Uinv(dt, dx, mspace, u1);
                vec_axpy(mspace, -1.0, u1, u);
@@ -1067,6 +1067,7 @@ main(int argc, char *argv[])
             else
             {
                vec_copy(mspace, w[i], u);
+               apply_Aadjoint(dt, dx, nu, mspace, u);
                apply_Uinv(dt,dx,mspace,u);
                vec_scale(mspace, -1.0, u);
             }
