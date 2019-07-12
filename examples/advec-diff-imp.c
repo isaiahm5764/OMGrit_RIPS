@@ -453,10 +453,10 @@ my_TriSolve(braid_App       app,
     */
 
    rtmp = (u->values);
-   vec_scale(mspace, -1.0, rtmp);
+   vec_scale(mspace, -0.5*dx*dt, rtmp);
    apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
    apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
-   vec_scale(mspace, 0.5, rtmp);
+   
 
 
    /* Complete residual update */
