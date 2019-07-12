@@ -137,7 +137,7 @@ vec_scale(int size, double alpha, double *x)
  * KKT component routines
  *--------------------------------------------------------------------------*/
 
-/* This is the K=[A B C] matrix. It acts on a vector in R^M */
+/* This applies A^-1 to a vector in R^M */
 /* This function requies that M>=3, but this can easily be fixed later */
 void
 apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
