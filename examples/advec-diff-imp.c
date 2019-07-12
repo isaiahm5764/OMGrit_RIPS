@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "braid.h"
 #include "braid_test.h"
@@ -68,6 +69,7 @@ typedef struct _braid_App_struct
    double *U0;
    double *ai;
    double *li;
+
 
 } my_App;
 
@@ -451,10 +453,10 @@ my_TriSolve(braid_App       app,
     */
 
    rtmp = (u->values);
-   vec_scale(mspace, -1.0, rtmp);
+   vec_scale(mspace, -0.5*dx*dt, rtmp);
    apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
    apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
-   vec_scale(mspace, 0.5, rtmp);
+   
 
 
    /* Complete residual update */
@@ -871,7 +873,7 @@ main(int argc, char *argv[])
       else if ( strcmp(argv[arg_index], "-nu") == 0 )
       {
          arg_index++;
-         nu = atoi(argv[arg_index++]);
+         nu = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-alpha") == 0 )
       {
@@ -964,6 +966,9 @@ main(int argc, char *argv[])
    }
    app->ai       = ai;
    app->li       = li;
+
+
+
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,

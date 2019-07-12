@@ -3,8 +3,8 @@ from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
 
-mspace=10
-ntime=2048
+mspace=100
+ntime=100
 #create the t mesh
 tmesh = linspace(0,1.0,ntime+1)
 xmesh = linspace(0,1.0,mspace+1)
@@ -17,14 +17,14 @@ counti=0
 countj=0
 with open('OMGritEx2SolvedU.txt') as f:
     linesU = f.readlines()
-with open('OMGritEx2SolvedV.txt') as f:
-    linesV = f.readlines()
+#with open('OMGritEx2SolvedV.txt') as f:
+#    linesV = f.readlines()
 for i in range(ntime+1):
     for j in range(mspace+1):
         state_vec[i][j] = linesU[mspace*i + j][:]
-for i in range(1,ntime+1):
-    for j in range(1,mspace):
-        v_vec[i][j] = linesV[(mspace-1)*(i-1)+j-1][:]
+#for i in range(1,ntime+1):
+#    for j in range(1,mspace):
+#        v_vec[i][j] = linesV[(mspace-1)*(i-1)+j-1][:]
 
 import numpy
 import matplotlib.pyplot as plt
