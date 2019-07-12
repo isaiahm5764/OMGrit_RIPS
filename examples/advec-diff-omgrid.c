@@ -847,7 +847,7 @@ main(int argc, char *argv[])
       else if ( strcmp(argv[arg_index], "-alpha") == 0 )
       {
          arg_index++;
-         alpha = atoi(argv[arg_index++]);
+         alpha = atof(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-num") == 0 )
       {
