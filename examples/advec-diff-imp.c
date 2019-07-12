@@ -170,7 +170,6 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
 {
    /* First solve U^Tw=u (U^Tw=f) */
 
-   /* Need to change this w to some other letter becuase w is already passed as a parameter of this function */
    double *w;
 
    vec_create(M, &w);
@@ -189,7 +188,7 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
    u[M-1]=w[M-1];
    for (int i = M-2; i >= 0; i--)
    {
-      u[i]=w[i+1]-l[i+1]*u[i+1];      
+      u[i]=w[i]-l[i]*u[i+1];      
    }
 }
 
