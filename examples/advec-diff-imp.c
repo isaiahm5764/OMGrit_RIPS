@@ -994,6 +994,18 @@ main(int argc, char *argv[])
          }
          fflush(file);
          fclose(file);
+
+         double objective_val=0;
+
+         for(int i=0; i<mspace; i++)
+         {
+            for(int j=0; j<mspace; j++)
+            {
+               objective_val += ((u[i][j] - U0[j]) * (u[i][j] - U0[j]) + alpha*vs[i][j]*vs[i][j] ) * dx;
+            }
+            objective_val *= dt;
+         }
+         printf("Objective Function Value: %f \n", objective_val);
       
    }
 
