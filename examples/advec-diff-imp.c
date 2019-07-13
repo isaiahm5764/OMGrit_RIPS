@@ -997,7 +997,7 @@ main(int argc, char *argv[])
 
          double objective_val=0;
 
-         for(int i=0; i<mspace; i++)
+         for(int i=0; i<ntime; i++)
          {
             for(int j=0; j<mspace; j++)
             {
