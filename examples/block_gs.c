@@ -684,8 +684,8 @@ main(int argc, char *argv[])
    */
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 8;
-   ntime = 256;
+   mspace = 200;
+   ntime = 2048;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
@@ -697,13 +697,12 @@ main(int argc, char *argv[])
 
    /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
+   tstop  = 1;             /* End of time domain*/
    dt = (tstop-tstart)/ntime; 
     
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
-   /* app->myid     = rank; */
    app->ntime    = ntime;
    app->mspace   = mspace;
    app->nu       = nu;
@@ -711,15 +710,19 @@ main(int argc, char *argv[])
    app->w        = NULL;
 
    /* Set this to whatever u0 is. */
-
-   double *U0 = (double*) malloc( ntime*sizeof(double) );
+   double *U0 = (double*) malloc( mspace*sizeof(double) );
+   double *u_init=(double*) malloc( mspace*sizeof(double) );
+   
    for(int i=0; i<mspace/2; i++){
       U0[i]=1;
    }
-
    for(int i=mspace/2; i<mspace; i++)
    {
       U0[i]=0;
+   }
+   for(int i=0; i<mspace; i++)
+   {
+      u_init[i]=1.0;
    }
 
    app->U0       = U0;
@@ -761,22 +764,24 @@ main(int argc, char *argv[])
 
    for(int i = 0; i < ntime; i++)
    {
-      vec_copy(mspace, U0, w[i]);
-      vec_copy(mspace, U0, v[i]);
-      vec_copy(mspace, U0, u[i]);      
-      vec_copy(mspace, U0, res[i]);
-      vec_copy(mspace, U0, res1[i]);
+      vec_copy(mspace, u_init, w[i]);
+      vec_copy(mspace, u_init, v[i]);
+      vec_copy(mspace, u_init, u[i]);      
+      vec_copy(mspace, u_init, res[i]);
+      vec_copy(mspace, u_init, res1[i]);
    }
 
 
    do
    {
-      norm = 0;
+      norm = 0;    
+      /**************FORWARD SOLVE*******************/
       /* Solve Lu^(k+1)=g-Dv^(k) */
       vec_copy(mspace, v[0], u[0]);
       apply_D(dt, dx, nu, mspace, u[0], li, ai);
       vec_scale(mspace, -1.0, u[0]);
       vec_axpy(mspace, 1.0, U0, u[0]);
+      apply_Phi(dt, dx, nu, mspace, u[0], li, ai);
       for (int i = 1; i < ntime; i++)
       {
          vec_copy(mspace, v[i], u[i]);
@@ -811,15 +816,26 @@ main(int argc, char *argv[])
          vec_scale(mspace, -1.0, v[i]);
       }
       
-      /*****************************************/
-      /* Compute residual for block Lu^(k+1)-g */
+      /**************RESIDUAL*******************/
+      /* Compute residual for block Lu^(k+1)+Dv^(k+1)-g */
       vec_copy(mspace, u[0], res[0]);
+      apply_A(dt, dx, nu, mspace, res[0]);
+      
       vec_axpy(mspace, -1.0, U0, res[0]);
+      
+      vec_copy(mspace, v[0], res1[0]);
+      vec_scale(mspace, -1.0*dt, res1[0]);
+      vec_axpy(mspace, 1.0, res1[0], res[0]);
       for (int i = 1; i < ntime; i++)
       {
          vec_copy(mspace, u[i], res[i]);
          apply_A(dt, dx, nu, mspace, res[i]);
+         
          vec_axpy(mspace, -1.0, res[i-1], res[i]);
+         
+         vec_copy(mspace, v[i], res1[i]);
+         vec_scale(mspace, -1.0*dt, res1[i]);
+         vec_axpy(mspace, 1.0, res1[i], res[i]);         
       }
       for(int i = 0; i < ntime; i++)
       {
@@ -830,24 +846,29 @@ main(int argc, char *argv[])
       }
 
       /* Compute residual for block Uu^(k+1)+L*w^(k+1)-k */
-      for(int i = 0; i< ntime-1; i++)
+      for(int i = 0; i < ntime-1; i++)
       {
          vec_copy(mspace, u[i], res[i]);
          vec_scale(mspace, dx*dt, res[i]);
+
          vec_copy(mspace, w[i], res1[i]);
          apply_Aadjoint(dt, dx, nu, mspace, res1[i]);
          vec_axpy(mspace, 1.0, res1[i], res[i]);
+
          vec_copy(mspace, w[i+1], res1[i]);
          vec_axpy(mspace, -1.0, res1[i], res[i]);
+
          vec_copy(mspace, U0, res1[i]);
          vec_scale(mspace, dx*dt, res1[i]);
-         vec_axpy(mspace, -1, res1[i], res[i]);
+         vec_axpy(mspace, -1.0, res1[i], res[i]);
       }
       vec_copy(mspace, u[ntime-1], res[ntime-1]);
       vec_scale(mspace, dx*dt, res[ntime-1]);
+
       vec_copy(mspace, w[ntime-1], res1[ntime-1]);
       apply_Aadjoint(dt, dx, nu, mspace, res1[ntime-1]);
       vec_axpy(mspace, 1.0, res1[ntime-1], res[ntime-1]);
+
       vec_copy(mspace, U0, res1[ntime-1]);
       vec_scale(mspace, dx*dt, res1[ntime-1]);
       vec_axpy(mspace, -1, res1[ntime-1], res[ntime-1]);
@@ -884,7 +905,91 @@ main(int argc, char *argv[])
       printf("Iteration number: ");
       printf("%f", niters);
       printf("\n");
-   }while(norm > 1.0e-6);
+   }while(norm > 1e-6 && niters < 100);
+
+   /* Print out v, w, u and U0 */
+   /**********************PRINT W OUT**********************/
+   char  filename[255];
+   FILE *file;
+   int   i,j;
+
+   sprintf(filename, "%s.%03d", "out/block_gs.out.w", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", w[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", w[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT V OUT**********************/
+   sprintf(filename, "%s.%03d", "out/block_gs.out.v", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", v[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", v[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file); 
+
+   /**********************PRINT U OUT**********************/
+   sprintf(filename, "%s.%03d", "out/block_gs.out.u", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", u[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", u[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT U0 OUT**********************/
+   char filename1[255];
+   double *us;
+
+   sprintf(filename1, "%s.%03d", "out/block_gs.u0", 000);
+   file = fopen(filename1, "w");
+   vec_create(mspace, &us);
+   vec_copy(mspace, U0, us);
+   for (j = 0; j < mspace; j++)
+      {
+         if(j!=mspace-1){
+            fprintf(file, "% 1.14e, ", us[j]);
+         }
+         else{
+            fprintf(file, "% 1.14e", us[j]);
+         }
+      }  
+
 
    return (0);
 }
