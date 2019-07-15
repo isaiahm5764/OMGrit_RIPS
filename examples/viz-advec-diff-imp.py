@@ -2,7 +2,7 @@ from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
-with open('advec-diff-imp.out.u.000') as f:
+with open('out/advec-diff-imp.out.u.000') as f:
         lines = f.readlines()
 for line in lines:
     line = line[6:]
@@ -20,7 +20,7 @@ state_vec = empty([nsteps+1, mspace+2])
 w_vec = empty([nsteps, mspace])
 v_vec = empty([nsteps, mspace])
 
-with open('advec-diff-imp.out.u0.000') as f:
+with open('out/advec-diff-imp.out.u0.000') as f:
     lines = f.readlines()
 split = lines[0].split(',')
 count2=1
@@ -30,7 +30,7 @@ for thing in split:
     state_vec[0,count2]=float(split[count2-1])
     count2+=1
 
-with open('advec-diff-imp.out.u.000') as f:
+with open('out/advec-diff-imp.out.u.000') as f:
     lines = f.readlines()
 count = 1
 for line in lines:
@@ -45,7 +45,7 @@ for line in lines:
     count+=1
 
 print(state_vec)
-with open('advec-diff-imp.out.w.000') as f:
+with open('out/advec-diff-imp.out.w.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
@@ -57,7 +57,7 @@ for line in lines:
         count2+=1
     count+=1
 
-with open('advec-diff-imp.out.v.000') as f:
+with open('out/advec-diff-imp.out.v.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:

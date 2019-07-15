@@ -602,6 +602,30 @@ my_Access(braid_App          app,
       vec_create(mspace, &(app->w[index]));
       vec_copy(mspace, (u->values), (app->w[index]));
    }
+
+   /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
+
+     char  filename[255];
+     FILE *file;
+     int  iter;
+     braid_AccessStatusGetIter(astatus, &iter);
+     braid_AccessStatusGetTIndex(astatus, &index);
+     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+     if(iter%3==0){
+        sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
+        file = fopen(filename, "w");
+        for(int i = 0; i<mspace; i++){
+            if(i<mspace-1){
+               fprintf(file, "%1.14e, ", (u->values)[i]);
+            }
+            else{
+               fprintf(file, "%1.14e", (u->values)[i]);
+            }
+        }
+     fflush(file);
+     fclose(file);
+     }
+
    return 0;
 }
 
@@ -887,7 +911,7 @@ main(int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "advec-diff-imp.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {
@@ -922,7 +946,7 @@ main(int argc, char *argv[])
          double **vs = (double **)malloc(ntime * sizeof(double*));
          for(int i = 0; i < ntime; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
 
-         sprintf(filename, "%s.%03d", "advec-diff-imp.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create((app->mspace), &v);
          for (i = 0; i < (app->ntime); i++)
@@ -949,7 +973,7 @@ main(int argc, char *argv[])
          char filename1[255];
          double *us;
 
-         sprintf(filename1, "%s.%03d", "advec-diff-imp.out.u0", (app->myid));
+         sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
          file = fopen(filename1, "w");
          vec_create(mspace, &us);
          vec_copy(mspace, U0, us);
@@ -964,7 +988,7 @@ main(int argc, char *argv[])
             }
          vec_destroy(us);
 
-         sprintf(filename, "%s.%03d", "advec-diff-imp.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
          file = fopen(filename, "w");
          double **u = (double **)malloc(ntime * sizeof(double*));
          for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
