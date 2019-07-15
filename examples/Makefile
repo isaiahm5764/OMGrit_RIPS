@@ -149,6 +149,10 @@ advec-diff-imp: advec-diff-imp.c $(BRAID_LIB_FILE)
 visc-berg-seq: visc-berg-seq.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
+block_gs: block_gs.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
 	
 # Rule for compiling .c files
 %: %.c $(BRAID_LIB_FILE)
