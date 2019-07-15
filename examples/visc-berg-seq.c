@@ -61,6 +61,7 @@ double
 {
    double dx = 1.0/(mspace-1);
    double dt = 1.0/ntime;
+   //this is wrong
    double *e = (double*) malloc( mspace*sizeof(double) );
    e[0] = u[0]*u[1]/(2*dx);
    for(int i=1; i<mspace-1; i++)
