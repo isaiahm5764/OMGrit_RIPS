@@ -87,19 +87,18 @@ double
    double *f;
    vec_create(mspace, &f);
    vec_copy(mspace, u, f);
-   double b = C;
-   w[0]=f[0]/a[0];
+   w[0]=f[0];
    for (int i = 1; i < mspace; i++)
    {
-      w[i]=(f[i]-w[i-1]*b)/a[i];
+      w[i]=f[i]-l[i-1]*w[i-1];
    }
 
-   /* Now solve L^Tx=w */ 
-   
-   utmp[mspace-1]=w[mspace-1];
+   /* Now solve Ux=w */ 
+   double b = C;
+   utmp[mspace-1]=w[mspace-1]/a[mspace-1];
    for (int i = mspace-2; i >= 0; i--)
    {
-      utmp[i]=w[i]-l[i]*utmp[i+1];      
+      utmp[i]=(w[i]-b*utmp[i+1])/a[i];      
    }
 
 
