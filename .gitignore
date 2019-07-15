@@ -53,6 +53,7 @@ dkms.conf
 
 #out files
 *.out*
+/examples/out
 
 # braid cycle file
 *.cycle
