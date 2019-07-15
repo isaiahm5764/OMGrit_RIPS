@@ -611,7 +611,7 @@ my_Access(braid_App          app,
      braid_AccessStatusGetIter(astatus, &iter);
      braid_AccessStatusGetTIndex(astatus, &index);
      /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-     if(iter%3==0){
+     if(iter%1==0){
         sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
         file = fopen(filename, "w");
         for(int i = 0; i<mspace; i++){

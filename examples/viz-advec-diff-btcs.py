@@ -11,11 +11,11 @@ tmesh = linspace(0,1.0,nsteps)
 
 xmesh = linspace(0,1.0,mspace)
 
-size = len(range(0,26,3))
+size = len(range(0,26))
 print(size)
 v_vec = empty([size, nsteps, mspace])
 count = 0;
-for i in range(0,26,3):
+for i in range(0,26):
     for j in range(0,256):
         sj = "%04d" % j
         si = "%04d" % i
@@ -61,7 +61,7 @@ x = range(nx)
 y = range(ny)
 
 count=0
-for i in range(0, 26, 3):
+for i in range(0, 26):
     hf = plt.figure(i+1)
     ha = hf.add_subplot(111, projection='3d')
 
