@@ -180,7 +180,10 @@ my_TriResidual(braid_App       app,
    vec_create(mspace, &rtmp);
    vec_create(mspace, &utmp);
 
-   /* Compute action of center block */
+   /* Compute action of center block:
+      This is basically just applying full non-linear operator i.e computing Au. 
+      It is just missing the term depending on the previous time solution, dealt
+      with below in "West Block"  */
 
    vec_copy(mspace, (r->values), utmp);
    utmp[0] = -b(dt,dx,nu)*utmp[1]+utmp[0]*(1+2*b(dt,dx,nu))+g(dt,dx)*utmp[0]*utmp[1];
@@ -194,7 +197,8 @@ my_TriResidual(braid_App       app,
 
 
 
-   /* Compute action of west block */
+   /* Compute action of west block 
+      Previous time contribution as mentioned above. */
    if (uleft != NULL)
    {
       vec_copy(mspace, (uleft->values), utmp);
@@ -203,7 +207,7 @@ my_TriResidual(braid_App       app,
 
    
 
-   /* No change for index 0 */
+   /* Deals with initial condition, only affeting first equation */
    if ((!homogeneous) && (index == 0))
    {
       vec_copy(mspace, u0, utmp);
@@ -269,10 +273,9 @@ my_TriSolve(braid_App       app,
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
-   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
-    *
-    * Using [\tilde{C_i}] = 2AA^T
-    * 
+   /* This is the C-tilde/relaxation step. It is just a rearrangement of the discrete 
+    * equation to isolate u_i^n. It takes the expected form u_i^n <- u_i^n + B*residual 
+    * It's possible that this is not an appropriate relaxation method, more work needed.
     */
 
    rtmp = (u->values);
@@ -714,7 +717,8 @@ main(int argc, char *argv[])
 
    if (access_level > 0)
    {
-      /* Print adjoint w to file */
+      /* Print w to file, w is actually u, the notation is just carried over from the 
+      * optimization case. */
       {
          char  filename[255];
          FILE *file;
