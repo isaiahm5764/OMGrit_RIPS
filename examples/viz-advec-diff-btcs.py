@@ -29,28 +29,6 @@ for i in range(0,26):
     count+=1
 
 
-# mpl.figure(1)
-# for x in range(0,mspace-1):
-#     mpl.plot(tmesh[1:], state_vec[:,x], '-b')
-# mpl.ylabel('U')
-# mpl.xlabel('time')
-# mpl.title('Solution Values')
-
-# mpl.figure(2)
-# for x in range(0,mspace-1):
-#     mpl.plot(tmesh[1:], w_vec[:,x], '-b')
-# mpl.ylabel('W')
-# mpl.xlabel('time')
-# mpl.title('Solution Values')
-
-# mpl.figure(3)
-# for x in range(0,mspace-1):
-#     mpl.plot(tmesh[1:], v_vec[:,x], '-b')
-# mpl.ylabel('V')
-# mpl.xlabel('time')
-# mpl.title('Solution Values')
-# mpl.show()
-
 import numpy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

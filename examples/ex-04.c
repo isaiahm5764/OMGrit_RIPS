@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "braid.h"
 #include "braid_test.h"
@@ -399,7 +400,7 @@ int main (int argc, char *argv[])
    braid_Core core;
    my_App     *app;
          
-   double   tstart, tstop; 
+   double   tstart, tstop, end, start, time; 
    int      rank, ntime, ts, iter, maxiter, nreq, arg_index;
    double  *design; 
    double  *gradient; 
@@ -424,9 +425,10 @@ int main (int argc, char *argv[])
    cfactor        = 2;
    braid_tol      = 1.0e-6;
    braid_adjtol   = 1.0e-6;
-   access_level   = 0;
+   access_level   = 1;
    print_level    = 0;
    
+   start = clock();
 
    /* Parse command line */
    arg_index = 1;
@@ -603,6 +605,7 @@ int main (int argc, char *argv[])
 
    }
 
+
    
    /* Output */
    if (rank == 0)
@@ -627,6 +630,19 @@ int main (int argc, char *argv[])
       }
    }
    braid_PrintStats(core);
+
+   end=clock();
+   time = (double)(end-start)/CLOCKS_PER_SEC;
+   printf("Total Run Time: %f s \n", time);
+   {
+      char    filename[255];
+      FILE   *file;
+      sprintf(filename, "%s.%d", "out/ex-04.time", ntime);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", time);
+      fflush(file);
+      fclose(file);
+   }
 
 
 

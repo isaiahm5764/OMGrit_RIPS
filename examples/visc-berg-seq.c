@@ -57,51 +57,23 @@ vec_scale(int size, double alpha, double *x)
 }
 
 double
-*my_Step(int ntime, int mspace, double nu, double *u, double *a, double *l)
+*my_Step(int ntime, int mspace, double nu, double *u)
 {
    double dx = 1.0/(mspace-1);
    double dt = 1.0/ntime;
-   //this is wrong
-   double *e = (double*) malloc( mspace*sizeof(double) );
-   e[0] = u[0]*u[1]/(2*dx);
-   for(int i=1; i<mspace-1; i++)
-   {
-      e[i] = u[i]*u[i+1]/(2*dx) - u[i]*u[i-1]/(2*dx);
-   }
-   e[mspace-1] = u[mspace-2]*u[mspace-1] - u[mspace-2]*u[mspace-3] -u[mspace-1]*u[mspace-2];
-
-   //Create utmp and do some operations to it
 
    double *utmp;
    vec_create(mspace, &utmp);
    vec_copy(mspace, u, utmp);
-   vec_scale(mspace, dt, e);
-   vec_axpy(mspace, -1.0, e, utmp);
 
-   double A = (-nu*dt / (dx*dx));
-   double B = 1 + 2*nu*dt/(dx*dx);
-   double C = (-nu*dt / (dx*dx));
+   double A = (nu*dt / (dx*dx));
+   double B = 1 - 2*nu*dt/(dx*dx);
 
-   //Now we need to apply A_inv to utmp. This is done using the implicit solve outlined by Joey and used in previous problems.
-   double *w;
-   vec_create(mspace, &w);
-   double *f;
-   vec_create(mspace, &f);
-   vec_copy(mspace, u, f);
-   w[0]=f[0];
-   for (int i = 1; i < mspace; i++)
+   utmp[0] = B*u[0] + A*u[1] - dt*(u[1]*u[1]/(4*dx));
+   for(int i=1; i<mspace-1; i++)
    {
-      w[i]=f[i]-l[i-1]*w[i-1];
+      utmp[i] = B*u[i] + A*u[i+1] + A*u[i-1] - dt*(u[i+1]*u[i+1]/(4*dx)) + dt*(u[i-1]*u[i-1]/(4*dx));
    }
-
-   /* Now solve Ux=w */ 
-   double b = C;
-   utmp[mspace-1]=w[mspace-1]/a[mspace-1];
-   for (int i = mspace-2; i >= 0; i--)
-   {
-      utmp[i]=(w[i]-b*utmp[i+1])/a[i];      
-   }
-
 
    return utmp;
 }
@@ -206,7 +178,7 @@ int main (int argc, char *argv[])
    }
    for(int i=1; i<ntime; i++)
    {
-      w[i] = my_Step(ntime, mspace, nu, w[i-1], ai, li);
+      w[i] = my_Step(ntime, mspace, nu, w[i-1]);
    }   
 
    /* Set up the app structure */

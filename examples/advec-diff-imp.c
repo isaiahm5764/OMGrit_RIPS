@@ -579,6 +579,7 @@ my_Access(braid_App          app,
 {
    int   done, index;
    int   mspace = (app->mspace);
+   double *U0 = (app->U0);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);

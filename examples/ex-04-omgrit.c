@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "braid.h"
 #include "braid_test.h"
@@ -567,12 +568,13 @@ main(int argc, char *argv[])
    braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt; 
+   double      tstart, tstop, dt, start, end, time; 
    int         rank, ntime, arg_index;
    double      gamma;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double      tol;
+   start=clock();
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -789,6 +791,19 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
       }
+   }
+
+   end=clock();
+   time = (double)(end-start)/CLOCKS_PER_SEC;
+   printf("Total Run Time: %f s \n", time);
+   {
+      char    filename[255];
+      FILE   *file;
+      sprintf(filename, "%s.%d", "out/ex-04-omgrit.time", ntime);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", time);
+      fflush(file);
+      fclose(file);
    }
 
    free(app);

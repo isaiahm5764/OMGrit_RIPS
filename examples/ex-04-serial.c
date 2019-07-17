@@ -49,12 +49,12 @@
 #include <stdio.h>
 #include <math.h>
 #include "ex-04-lib.c"
-
+#include <time.h>
 
 
 int main (int argc, char *argv[])
 {
-   double   tstart, tstop, deltaT;
+   double   tstart, tstop, deltaT, start, end;
    int      ntime, ts, arg_index;
    int      maxiter,iter;
    double   objective;
@@ -66,7 +66,8 @@ int main (int argc, char *argv[])
    double   gnorm;
    double   gtol;
    double   stepsize;
-   
+   double time;
+   start=clock();
    /* Define time domain */
    ntime  = 20;                         /* Total number of time-steps */
    tstart = 0.0;                        /* Beginning of time-domain */
@@ -214,6 +215,19 @@ int main (int argc, char *argv[])
    else
    {
       printf("\n Optimization has converged.\n\n");
+   }
+
+   end=clock();
+   time = (double)(end-start)/CLOCKS_PER_SEC;
+   printf("Total Run Time: %f s \n", time);
+   {
+      char    filename[255];
+      FILE   *file;
+      sprintf(filename, "%s.%d", "out/ex-04-serial.time", ntime);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", time);
+      fflush(file);
+      fclose(file);
    }
 
    /* Write final state and design to file */
