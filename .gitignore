@@ -53,6 +53,7 @@ dkms.conf
 
 #out files
 *.out*
+/examples/out
 
 # braid cycle file
 *.cycle
@@ -60,3 +61,5 @@ dkms.conf
 # executable files for advec-diff and advec-diff-imp
 advec-diff-omgrid
 advec-diff-imp
+block_gs
+advec-diff-imp-full-res

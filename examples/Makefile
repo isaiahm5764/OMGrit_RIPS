@@ -146,6 +146,10 @@ advec-diff-imp: advec-diff-imp.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
+viscous-burgers: viscous-burgers.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
 visc-berg-seq: visc-berg-seq.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
@@ -165,6 +169,14 @@ viscous-burgers-2: viscous-burgers-2.c $(BRAID_LIB_FILE)
 advec-imp-step-seq: advec-imp-step-seq.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
+<<<<<<< HEAD
+=======
+	
+advec-diff-imp-full-res: advec-diff-imp-full-res.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
+
+>>>>>>> 4119801b70e68418e3d448b2abe494c20a0e305c
 # Rule for compiling .c files
 %: %.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
