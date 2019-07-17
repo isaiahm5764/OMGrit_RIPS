@@ -280,12 +280,12 @@ my_TriSolve(braid_App       app,
 
    rtmp = (u->values);
 
-   rtmp[0] = -1/(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[1]))*rtmp[0]; 
+   rtmp[0] = (-1/(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[1])))*rtmp[0]; 
    for(int i = 1; i < mspace-2; i++)
    {
-    rtmp[i] = -1/(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1]));
+    rtmp[i] = (-1/(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1])))*rtmp[i];
    }
-   rtmp[mspace-1] = -1/(1+2*b(dt,dx,nu)+g(dt,dx)*(-utmp[mspace-2]))*rtmp[mspace-1]; 
+   rtmp[mspace-1] = (-1/(1+2*b(dt,dx,nu)+g(dt,dx)*(-utmp[mspace-2])))*rtmp[mspace-1]; 
    
 
 
