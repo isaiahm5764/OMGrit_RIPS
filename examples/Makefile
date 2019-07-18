@@ -165,11 +165,14 @@ viscous-burgers-2: viscous-burgers-2.c $(BRAID_LIB_FILE)
 advec-imp-step-seq: advec-imp-step-seq.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
-
 	
 advec-diff-imp-full-res: advec-diff-imp-full-res.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
+
+block_gj: block_gj.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)		
 
 # Rule for compiling .c files
 %: %.c $(BRAID_LIB_FILE)
