@@ -153,7 +153,7 @@ my_TriResidual(braid_App       app,
 {
    double  t, tprev, tnext, dt, dx;
    double  nu = (app->nu);
-   double *rtmp, *utmp;
+   double *rtmp, *utmp, *u2tmp;
    int     level, index;
    int     mspace = (app->mspace);
    double *u0 = (app->U0);
@@ -172,40 +172,54 @@ my_TriResidual(braid_App       app,
       dt = t - tprev;
    }
 
+
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
-
-   double A = dt*nu/(dx*dx);
-   double B = 1-(2*nu*dt/(dx*dx));
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
    vec_create(mspace, &utmp);
+   vec_create(mspace, &u2tmp);
 
-   /* Compute action of center block */
+   /* Compute action of center block:
+      This is basically just applying full non-linear operator i.e computing Au. 
+      It is just missing the term depending on the previous time solution, dealt
+      with below in "West Block"  */
+
 
    vec_copy(mspace, (r->values), utmp);
-   utmp[0] = B*utmp[0] + A*utmp[1] + utmp[1]*utmp[1]/(4*dx);
-   for(int i = 1; i < mspace-2; i++)
+   utmp[0] = -b(dt,dx,nu)*utmp[1]+utmp[0]*(1+2*b(dt,dx,nu));
+   for(int i = 1; i <= mspace-2; i++)
    {
-    utmp[i] =A*utmp[i-1] + B*utmp[i] + A*utmp[i-1] + utmp[i+1]*utmp[i+1]/(4*dx) + utmp[i-1]*utmp[i-1]/(4*dx); 
+    utmp[i] = -b(dt,dx,nu)*(utmp[i-1]+utmp[i+1])+utmp[i]*(1+2*b(dt,dx,nu));
    }
-   utmp[mspace-1] = A*utmp[mspace-2] + B*utmp[mspace-1] + utmp[mspace-1]*utmp[mspace-1]/(4*dx) + utmp[mspace-2]*utmp[mspace-2]/(4*dx);
+   utmp[mspace-1] = -b(dt,dx,nu)*(utmp[mspace-2])+utmp[mspace-1]*(1+2*b(dt,dx,nu));
 
    vec_copy(mspace, utmp, rtmp);
 
 
 
-   /* Compute action of west block */
+
+   /* Compute action of west block 
+    *  Previous time contribution as mentioned above. This term is non-linear so depends
+    * on previous and current 
+    */
+
    if (uleft != NULL)
    {
-      vec_copy(mspace, (uleft->values), utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
+      vec_copy(mspace, (r->values), utmp);
+      vec_copy(mspace, (uleft->values), u2tmp);
+      vec_axpy(mspace, -1.0, u2tmp, rtmp);
+      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(utmp[1]);
+      for(int i = 1; i <= mspace-2; i++)
+      {
+        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(utmp[i+1]-utmp[i-1]);
+      }
+      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(utmp[mspace-2]);
    }
 
-   
 
-   /* No change for index 0 */
+   /* Deals with initial condition, only affceting first equation */
    if ((!homogeneous) && (index == 0))
    {
       vec_copy(mspace, u0, utmp);
@@ -261,7 +275,7 @@ my_TriSolve(braid_App       app,
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));;
 
-   double B = 1-(2*nu*dt/(dx*dx));
+
    /* Create temporary vector */
    vec_create(mspace, &utmp);
 
@@ -271,20 +285,23 @@ my_TriSolve(braid_App       app,
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
-   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
-    *
-    * Using [\tilde{C_i}] = 2AA^T
-    * 
+
+   /* This is the C-tilde/relaxation step. It is just a rearrangement of the discrete 
+    * equation to isolate u_i^n. It takes the expected form u_i^n <- u_i^n + B*residual 
+    * It's possible that this is not an appropriate relaxation method, more work needed.
     */
 
    rtmp = (u->values);
 
-   rtmp[0] = -rtmp[0]/(B); 
-   for(int i = 1; i < mspace; i++)
+   rtmp[0] = (-1/(1+2*b(dt,dx,nu)))*rtmp[0]; 
+   /*printf("1 entry divided by %lf \n", (1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[1])));*/
+   for(int i = 1; i <= mspace-2; i++)
    {
-    rtmp[i] = (-rtmp[i]/B);
+    rtmp[i] = (-1/(1+2*b(dt,dx,nu)))*rtmp[i];
+    /*printf("%d entry divided by %lf \n", i+1,(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1])));*/
    }
-   
+   rtmp[mspace-1] = (-1/(1+2*b(dt,dx,nu)))*rtmp[mspace-1]; 
+   /*printf("%d entry divided by %lf \n\n", mspace, (1+2*b(dt,dx,nu)+g(dt,dx)*(-utmp[mspace-2])));*/
 
 
    /* Complete residual update */
@@ -715,13 +732,16 @@ main(int argc, char *argv[])
 
    if (access_level > 0)
    {
-      /* Print adjoint w to file */
+
+      /* Print w to file, w is actually u, the notation is just carried over from the 
+      * optimization case. */
+
       {
          char  filename[255];
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "out/viscous-burgers-2.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/viscous-burgers.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {
