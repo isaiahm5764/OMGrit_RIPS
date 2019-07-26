@@ -605,13 +605,15 @@ my_Access(braid_App          app,
    }
 
    /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
-
+    /*
      char  filename[255];
      FILE *file;
      int  iter;
      braid_AccessStatusGetIter(astatus, &iter);
      braid_AccessStatusGetTIndex(astatus, &index);
+     */
      /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+    /*
      if(iter%3==0){
         sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
         file = fopen(filename, "w");
@@ -626,6 +628,7 @@ my_Access(braid_App          app,
      fflush(file);
      fclose(file);
      }
+     */
 
    return 0;
 }
@@ -966,7 +969,7 @@ main(int argc, char *argv[])
                vec_copy(mspace, vtemp, u[i]);
             }
             
-        }
+    }
 
       /**************** END TIME HERE ****************/
       end=clock();
@@ -1125,6 +1128,41 @@ main(int argc, char *argv[])
    fflush(file);
    fclose(file);
 
+   /**********************PRINT TIME OUT**********************/
+   {
+      sprintf(filename, "%s.%d", "out/advec-diff-imp-full-res.time", maxiter);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", time);
+      fflush(file);
+      fclose(file);
+   }
+
+   /**********************PRINT TOTAL RES OUT**********************/
+   {
+      sprintf(filename, "%s.%d", "out/advec-diff-imp-full-res.res", maxiter);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", norm);
+      fflush(file);
+      fclose(file);
+   }
+
+    /**********************PRINT OUT IF CONVERGE OR DIVERGE**********************/
+   {
+      sprintf(filename, "%s.%d.%f", "out/advec-diff-imp-full-res.conv", ntime, nu);
+      file = fopen(filename, "w");
+      if (isinf(norm)||isnan(norm))
+      {
+         fprintf(file, "%f", 0.0);
+      }
+      else
+      {
+         fprintf(file, "%f", 1.0);
+      }
+     
+      fflush(file);
+      fclose(file);
+   }     
+
    /**********************PRINT U0 OUT**********************/
    char filename1[255];
    double *us;
@@ -1141,12 +1179,11 @@ main(int argc, char *argv[])
          else{
             fprintf(file, "% 1.14e", us[j]);
          }
-      }            
-
-    }  
+      }
 
 
 
+}  
    /********************************************************************************************************/
 
    free(app);

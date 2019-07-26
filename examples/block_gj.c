@@ -580,7 +580,6 @@ my_Access(braid_App          app,
 {
    int   done, index;
    int   mspace = (app->mspace);
-   double *U0 = (app->U0);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);
@@ -604,30 +603,6 @@ my_Access(braid_App          app,
       vec_create(mspace, &(app->w[index]));
       vec_copy(mspace, (u->values), (app->w[index]));
    }
-
-   /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
-
-     char  filename[255];
-     FILE *file;
-     int  iter;
-     braid_AccessStatusGetIter(astatus, &iter);
-     braid_AccessStatusGetTIndex(astatus, &index);
-     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-     if(iter%1==0){
-        sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
-        file = fopen(filename, "w");
-        for(int i = 0; i<mspace; i++){
-            if(i<mspace-1){
-               fprintf(file, "%1.14e, ", (u->values)[i]);
-            }
-            else{
-               fprintf(file, "%1.14e", (u->values)[i]);
-            }
-        }
-     fflush(file);
-     fclose(file);
-     }
-
    return 0;
 }
 
@@ -698,45 +673,28 @@ my_BufUnpack(braid_App           app,
 int
 main(int argc, char *argv[])
 {
-
-   braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt, dx, start, end; 
-   int         rank, ntime, mspace, arg_index;
-   double      alpha, nu;
+   double      tstart, tstop, dt, dx, tol; 
+   int         ntime, mspace, maxiter;
+   double      alpha, nu, start, end, time, seed;
+   /*
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double      tol;
-   double time;
-   start=clock();
-
-   /* Initialize MPI */
-   MPI_Init(&argc, &argv);
-   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   */
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 8;
-   ntime = 256;
+   mspace = 12;
+   ntime = 4096;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
-   nu    = 2;                /* parameter in PDE */
+   nu    = 1.5;                /* parameter in PDE */
+   tol  = 1.0e-6;
+   maxiter = 300;
 
-   /* Define some Braid parameters */
-   max_levels     = 30;
-   min_coarse     = 1;
-   nrelax         = 1;
-   nrelaxc        = 30;
-   maxiter        = 300;
-   cfactor        = 2;
-   tol            = 1.0e-6;
-   access_level   = 2;
-   print_level    = 2;
-
-
-   /* Parse command line */
-   arg_index = 1;
+   int arg_index = 1;
    while (arg_index < argc)
    {
       if ( strcmp(argv[arg_index], "-help") == 0 )
@@ -753,13 +711,9 @@ main(int argc, char *argv[])
          printf("  -nu <nu>                : Constant Parameter in PDE  \n");
          printf("  -alpha <alpha>          : Constant Parameter in Objective Function  \n");
          printf("  -ml <max_levels>        : Max number of braid levels \n");
-         printf("  -num  <nrelax>          : Num F-C relaxations\n");
-         printf("  -nuc <nrelaxc>          : Num F-C relaxations on coarsest grid\n");
          printf("  -mi <maxiter>           : Max iterations \n");
-         printf("  -cf <cfactor>           : Coarsening factor \n");
          printf("  -tol <tol>              : Stopping tolerance \n");
-         printf("  -access <access_level>  : Braid access level \n");
-         printf("  -print <print_level>    : Braid print level \n");
+         printf("  -seed <seed>            : Seed for initial guess \n");
          exit(1);
       }
       else if ( strcmp(argv[arg_index], "-ntime") == 0 )
@@ -772,15 +726,15 @@ main(int argc, char *argv[])
          arg_index++;
          tstop = atoi(argv[arg_index++]);
       }
+      else if ( strcmp(argv[arg_index], "-seed") == 0 )
+      {
+         arg_index++;
+         seed = atoi(argv[arg_index++]);
+      }        
       else if ( strcmp(argv[arg_index], "-mspace") == 0 )
       {
          arg_index++;
          mspace = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-ml") == 0 )
-      {
-         arg_index++;
-         max_levels = atoi(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-nu") == 0 )
       {
@@ -792,40 +746,15 @@ main(int argc, char *argv[])
          arg_index++;
          alpha = atof(argv[arg_index++]);
       }
-      else if ( strcmp(argv[arg_index], "-num") == 0 )
-      {
-         arg_index++;
-         nrelax = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-nuc") == 0 )
-      {
-         arg_index++;
-         nrelaxc = atoi(argv[arg_index++]);
-      }
       else if ( strcmp(argv[arg_index], "-mi") == 0 )
       {
          arg_index++;
          maxiter = atoi(argv[arg_index++]);
       }
-      else if ( strcmp(argv[arg_index], "-cf") == 0 )
-      {
-         arg_index++;
-         cfactor = atoi(argv[arg_index++]);
-      }
       else if ( strcmp(argv[arg_index], "-tol") == 0 )
       {
          arg_index++;
          tol = atof(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-access") == 0 )
-      {
-         arg_index++;
-         access_level = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-print") == 0 )
-      {
-         arg_index++;
-         print_level = atoi(argv[arg_index++]);
       }
       else
       {
@@ -846,7 +775,6 @@ main(int argc, char *argv[])
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
-   app->myid     = rank;
    app->ntime    = ntime;
    app->mspace   = mspace;
    app->nu       = nu;
@@ -854,15 +782,24 @@ main(int argc, char *argv[])
    app->w        = NULL;
 
    /* Set this to whatever u0 is. */
-
-   double *U0 = (double*) malloc( ntime*sizeof(double) );
+   double *U0 = (double*) malloc( mspace*sizeof(double) );
+   double *u_init=(double*) malloc( mspace*sizeof(double) );
+   
    for(int i=0; i<mspace/2; i++){
       U0[i]=1;
    }
-
    for(int i=mspace/2; i<mspace; i++)
    {
       U0[i]=0;
+   }
+
+   /* Set the initial guess to be random */
+   srand(seed);
+   for(int i=0; i<mspace; i++)
+   {   
+      double random_value;
+      random_value=(double)rand()/RAND_MAX*2.0-1.0; 
+      u_init[i]=random_value;
    }
 
    app->U0       = U0;
@@ -880,249 +817,303 @@ main(int argc, char *argv[])
    app->li       = li;
 
 
-
-
-   /* Initialize XBraid */
-   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
-                      my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
-                      my_Sum, my_SpatialNorm, my_Access,
-                      my_BufSize, my_BufPack, my_BufUnpack, &core);
-
-   /* Set some XBraid(_Adjoint) parameters */
-   braid_SetMaxLevels(core, max_levels);
-   braid_SetMinCoarse(core, min_coarse);
-   braid_SetNRelax(core, -1, nrelax);
-   if (max_levels > 1)
-   {
-      braid_SetNRelax(core, max_levels-1, nrelaxc); /* nrelax on coarsest level */
-   }
-   braid_SetCFactor(core, -1, cfactor);
-   braid_SetAccessLevel(core, access_level);
-   braid_SetPrintLevel( core, print_level);       
-   braid_SetMaxIter(core, maxiter);
-   braid_SetAbsTol(core, tol);
-
-   /* Parallel-in-time TriMGRIT simulation */
-   braid_Drive(core);
-
    dx = 1/((double)(mspace+1));;
    
 
-   if (access_level > 0)
+   /* Start the Gauss-Seidel iterations */
+   start=clock();
+   double norm=0;
+   double niters=0;
+
+   double **w = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) w[i] = (double *)malloc(mspace * sizeof(double));
+   
+   double **v = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) v[i] = (double *)malloc(mspace * sizeof(double));
+   
+   double **u = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+
+   double **w_old = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) w_old[i] = (double *)malloc(mspace * sizeof(double));      
+   
+   double **res = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) res[i] = (double *)malloc(mspace * sizeof(double));
+
+   double **res1 = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) res1[i] = (double *)malloc(mspace * sizeof(double));
+
+   for(int i = 0; i < ntime; i++)
    {
-      /* Print adjoint w to file */
-      {
-         char  filename[255];
-         FILE *file;
-         int   i,j;
-
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
-         file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-            fprintf(file, "%05d: ", (i+1));
-            for(j=0; j <mspace; j++){
-               if(j==mspace-1){
-                  fprintf(file, "% 1.14e", w[i][j]);
-               }
-               else{
-                  fprintf(file, "% 1.14e, ", w[i][j]);
-               }
-            }
-            fprintf(file, "\n");
-         }
-         fflush(file);
-         fclose(file);
-      }
-      
-      end=clock();
-         time = (double)(end-start)/CLOCKS_PER_SEC;
-         printf("Total Run Time: %f s \n", time);
-         {
-            char    filename[255];
-            FILE   *file;
-            sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
-            file = fopen(filename, "w");
-            fprintf(file, "%f", time);
-            fflush(file);
-            fclose(file);
-         }
-      /* Compute state u from adjoint w and print to file */
-      /* Not sure if this is completely correct - tom */
-      
-
-      /* Compute control v from adjoint w and print to file */
-      /* V= (1/(alpha*dx))*aW */
-      
-         char    filename[255];
-         FILE   *file;
-         int     i,j;
-         double *v;
-
-         double **vs = (double **)malloc(ntime * sizeof(double*));
-         for(int i = 0; i < ntime; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
-
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
-         file = fopen(filename, "w");
-         vec_create((app->mspace), &v);
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-            vec_copy(mspace, w[i], v);
-            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
-            apply_Vinv(dt, dx, alpha, mspace,v);
-
-            /* TODO Dynamical print based on size of v */
-            fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < (app->mspace); j++)
-            {
-               vs[i][j] = v[j];
-               fprintf(file, "% 1.14e, ", v[j]);
-            }
-            fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
-         }
-         vec_destroy(v);
-         fflush(file);
-         fclose(file);
-      
-
-         char filename1[255];
-         double *us;
-
-         sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
-         file = fopen(filename1, "w");
-         vec_create(mspace, &us);
-         vec_copy(mspace, U0, us);
-         for (j = 0; j < mspace; j++)
-            {
-               if(j!=mspace-1){
-                  fprintf(file, "% 1.14e, ", us[j]);
-               }
-               else{
-                  fprintf(file, "% 1.14e", us[j]);
-               }
-            }
-         vec_destroy(us);
-
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
-         file = fopen(filename, "w");
-         double **u = (double **)malloc(ntime * sizeof(double*));
-         for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
-
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double *vtemp = vs[i];
-            if(i==0){
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, U0, vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-            else{
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, u[i-1], vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-
-            fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < mspace; j++)
-            {
-               fprintf(file, "% 1.14e, ", u[i][j]);
-            }
-            fprintf(file, "% 1.14e\n", u[i][mspace-1]);
-         }
-         fflush(file);
-         fclose(file);
-
-         double objective_val=0;
-
-         for(int i=0; i<ntime; i++)
-         {
-            for(int j=0; j<mspace; j++)
-            {
-               objective_val += ((u[i][j] - U0[j]) * (u[i][j] - U0[j]) + alpha*vs[i][j]*vs[i][j] ) * dx;
-            }
-            objective_val *= dt;
-         }
-         printf("Objective Function Value: %f \n", objective_val);
-      
+      vec_copy(mspace, u_init, w[i]);
+      vec_copy(mspace, u_init, v[i]);
+      vec_copy(mspace, u_init, u[i]);      
+      vec_copy(mspace, u_init, res[i]);
+      vec_copy(mspace, u_init, res1[i]);
    }
 
-   //code below is used to calculate the evolution of u over time based off of V
 
-   for(int it = 0; it<20; it+=1){
+   do
+   {
+      norm = 0;    
+      /**************FORWARD SOLVE*******************/
 
-      double **us = (double **)malloc(ntime * sizeof(double*));
-      for(int i = 0; i < ntime; i++) us[i] = (double *)malloc(mspace * sizeof(double));
-        double **u = (double **)malloc(ntime * sizeof(double*));
-      for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
-      FILE *fp;
-      for(int n=0; n<ntime; n++)
+      /* Solve L*w^(k+1)=k-Uu^(k) */
+      vec_copy(mspace, w[ntime-1],w_old[ntime-1]); /* Copy of w_N^k for the v^k+1 solve */
+      vec_copy(mspace, u[ntime-1], w[ntime-1]);
+      vec_scale(mspace, -1.0, w[ntime-1]);
+      vec_axpy(mspace, 1.0, U0, w[ntime-1]);
+      vec_scale(mspace, dx*dt, w[ntime-1]); /* Apply U is the same as scaling by dxdt */
+      apply_PhiAdjoint(dt, dx, nu, mspace, w[ntime-1], li, ai);
+      for(int i = ntime-2; i >= 0; i--)
       {
-        char str[100];
-        sprintf(str, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", it, n);
-        fp = fopen(str, "r");
-        char line[1000];
-        fgets(line, 1000, fp);
-
-        char *token = strtok(line, ",");
-        us[n][0]=atof(token);
-        int count=1;
-        while(token != NULL)
-        {
-          us[n][count]=atof(token);
-          token = strtok(NULL, ",");
-          count+=1;
-        }
-        fflush(fp);
-        fclose(fp);
+         vec_copy(mspace, w[i],w_old[i]); /* Copy of w_i^k for the v^k+1 solve */
+         vec_copy(mspace, u[i], w[i]);
+         vec_scale(mspace, -1.0, w[i]);
+         vec_axpy(mspace, 1.0, U0, w[i]);
+         vec_scale(mspace, dx*dt, w[i]); 
+         vec_axpy(mspace, 1.0, w[i+1], w[i]);
+         apply_PhiAdjoint(dt, dx, nu, mspace, w[i], li, ai);
       }
-      for (int i = 0; i < ntime; i++)
+
+      /* Solve Lu^(k+1)=g-Dv^(k) */
+      vec_copy(mspace, v[0], u[0]);
+      apply_D(dt, dx, nu, mspace, u[0], li, ai);
+      /*vec_scale(mspace, -1.0, u[0]);*/
+      vec_axpy(mspace, 1.0, U0, u[0]);
+      apply_Phi(dt, dx, nu, mspace, u[0], li, ai);
+      for (int i = 1; i < ntime; i++)
+      {
+         vec_copy(mspace, v[i], u[i]);
+         apply_D(dt, dx, nu, mspace, u[i], li, ai);
+         /*vec_scale(mspace, -1.0, u[i]);*/
+         vec_axpy(mspace, 1.0, u[i-1], u[i]);
+         apply_Phi(dt, dx, nu, mspace, u[i], li, ai);
+      }
+
+      /* Solve Vv^(k+1)=h-D*w^(k) */
+      for(int i = 0; i < ntime; i++)
+      {
+         vec_copy(mspace, w_old[i], v[i]);
+         apply_D(dt, dx, nu, mspace, v[i], li, ai);
+         apply_Vinv(dt, dx, alpha, mspace, v[i]);
+         /*vec_scale(mspace, -1.0, v[i]);*/
+      }
+      
+      /****************************RESIDUAL*********************************/
+      /* Compute residual for block Lu^(k+1)+Dv^(k+1)-g */
+      vec_copy(mspace, u[0], res[0]);
+      apply_A(dt, dx, nu, mspace, res[0]);
+      
+      vec_axpy(mspace, -1.0, U0, res[0]);
+      
+      vec_copy(mspace, v[0], res1[0]);
+      vec_scale(mspace, -1.0*dt, res1[0]);
+      vec_axpy(mspace, 1.0, res1[0], res[0]);
+      for (int i = 1; i < ntime; i++)
+      {
+         vec_copy(mspace, u[i], res[i]);
+         apply_A(dt, dx, nu, mspace, res[i]);
+         
+         vec_axpy(mspace, -1.0, u[i-1], res[i]);
+         
+         vec_copy(mspace, v[i], res1[i]);
+         vec_scale(mspace, -1.0*dt, res1[i]);
+         vec_axpy(mspace, 1.0, res1[i], res[i]);         
+      }
+      for(int i = 0; i < ntime; i++)
+      {
+         for (int j = 0; j < mspace; j++)
          {
-            double *vtemp = us[i];
-            if(i==0){
-              vec_scale(mspace, 1/(alpha*dx), vtemp);
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, U0, vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-            else{
-              vec_scale(mspace, 1/(alpha*dx), vtemp);
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, u[i-1], vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
+            norm = norm + res[i][j]*res[i][j];
          }
-       char  filename[255];
-       FILE *file;
-       /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-          sprintf(filename, "%s.%04d", "out/advec-diff.u", it);
-          file = fopen(filename, "w");
-          for(int n=0; n<ntime; n++){
-          for(int i = 0; i<mspace; i++){
-              if(i<mspace-1){
-                 fprintf(file, "%1.14e, ", u[n][i]);
-              }
-              else{
-                 fprintf(file, "%1.14e\n", u[n][i]);
-              }
-          }
-        }
-       fflush(file);
-       fclose(file);
+      }
 
-     }
-   
+      /* Compute residual for block Uu^(k+1)+L*w^(k+1)-k */
+      for(int i = 0; i < ntime-1; i++)
+      {
+         vec_copy(mspace, u[i], res[i]);
+         vec_scale(mspace, dx*dt, res[i]);
 
+         vec_copy(mspace, w[i], res1[i]);
+         apply_Aadjoint(dt, dx, nu, mspace, res1[i]);
+         vec_axpy(mspace, 1.0, res1[i], res[i]);
 
-   free(app);
-   
-   braid_Destroy(core);
-   MPI_Finalize();
+         vec_copy(mspace, w[i+1], res1[i]);
+         vec_axpy(mspace, -1.0, res1[i], res[i]);
+
+         vec_copy(mspace, U0, res1[i]);
+         vec_scale(mspace, dx*dt, res1[i]);
+         vec_axpy(mspace, -1.0, res1[i], res[i]);
+      }
+      vec_copy(mspace, u[ntime-1], res[ntime-1]);
+      vec_scale(mspace, dx*dt, res[ntime-1]);
+
+      vec_copy(mspace, w[ntime-1], res1[ntime-1]);
+      apply_Aadjoint(dt, dx, nu, mspace, res1[ntime-1]);
+      vec_axpy(mspace, 1.0, res1[ntime-1], res[ntime-1]);
+
+      vec_copy(mspace, U0, res1[ntime-1]);
+      vec_scale(mspace, dx*dt, res1[ntime-1]);
+      vec_axpy(mspace, -1, res1[ntime-1], res[ntime-1]);
+      for(int i = 0; i < ntime; i++)
+      {
+         for (int j = 0; j < mspace; j++)
+         {
+            norm = norm + res[i][j]*res[i][j];
+         }
+      }
+
+      /* Compute residual for block D*w^(k+1)+Vv^(k+1)-0 */
+      for(int i = 0; i< ntime-1; i++)
+      {
+         vec_copy(mspace, v[i], res[i]);
+         vec_copy(mspace, w[i], res1[i]);
+         vec_scale(mspace, alpha*dx*dt, res[i]);
+         vec_scale(mspace, -1.0*dt, res1[i]);
+         vec_axpy(mspace, 1.0, res1[i], res[i]);
+      }          
+      for(int i = 0; i < ntime; i++)
+      {
+         for (int j = 0; j < mspace; j++)
+         {
+            norm = norm + res[i][j]*res[i][j];
+         }
+      }
+      norm = sqrt(norm);        
+      /*****************************************/
+      niters = niters + 1;
+      printf("Residual: ");
+      printf("%f", norm);
+      printf("\n");
+      printf("Iteration number: ");
+      printf("%f", niters);
+      printf("\n");
+   }while(norm > tol && niters < maxiter && norm < 1e30);
+   end=clock();
+   time=(double)(end-start)/CLOCKS_PER_SEC;
+   printf("The total run time is: ");
+   printf("%f", time);
+   printf(" seconds\n");
+
+   /* Print out v, w, u and U0 */
+   /**********************PRINT W OUT**********************/
+   char  filename[255];
+   FILE *file;
+   int   i,j;
+
+   sprintf(filename, "%s.%03d", "out/block_gj.out.w", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", w[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", w[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT V OUT**********************/
+   sprintf(filename, "%s.%03d", "out/block_gj.out.v", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", v[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", v[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file); 
+
+   /**********************PRINT U OUT**********************/
+   sprintf(filename, "%s.%03d", "out/block_gj.out.u", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      /* double **w = (app->w); */
+      fprintf(file, "%05d: ", (i+1));
+      for(j=0; j <mspace; j++){
+         if(j==mspace-1){
+            fprintf(file, "% 1.14e", u[i][j]);
+         }
+         else{
+            fprintf(file, "% 1.14e, ", u[i][j]);
+         }
+      }
+      fprintf(file, "\n");
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT TIME OUT**********************/
+   {
+      sprintf(filename, "%s.%d", "out/block_gj.time", maxiter);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", time);
+      fflush(file);
+      fclose(file);
+   }
+
+   /**********************PRINT TOTAL RES OUT**********************/
+   {
+      sprintf(filename, "%s.%d", "out/block_gj.res", maxiter);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", norm);
+      fflush(file);
+      fclose(file);
+   }
+
+    /**********************PRINT OUT IF CONVERGE OR DIVERGE**********************/
+   {
+      sprintf(filename, "%s.%d.%f", "out/block_gj.conv", ntime, nu);
+      file = fopen(filename, "w");
+      if (isinf(norm)||isnan(norm)||norm>1e30-1)
+      {
+         fprintf(file, "%f", 0.0);
+      }
+      else
+      {
+         fprintf(file, "%f", 1.0);
+      }
+     
+      fflush(file);
+      fclose(file);
+   }   
+
+   /**********************PRINT U0 OUT**********************/
+   char filename1[255];
+   double *us;
+
+   sprintf(filename1, "%s.%03d", "out/block_gj.u0", 000);
+   file = fopen(filename1, "w");
+   vec_create(mspace, &us);
+   vec_copy(mspace, U0, us);
+   for (j = 0; j < mspace; j++)
+      {
+         if(j!=mspace-1){
+            fprintf(file, "% 1.14e, ", us[j]);
+         }
+         else{
+            fprintf(file, "% 1.14e", us[j]);
+         }
+      }  
+
 
    return (0);
 }

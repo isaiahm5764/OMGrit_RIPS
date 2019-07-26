@@ -2,7 +2,7 @@ from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
-with open('advec-imp-step-seq.out.u.000') as f:
+with open('out/viscous-burgers.w.000') as f:
         lines = f.readlines()
 for line in lines:
     line = line[6:]
@@ -16,7 +16,17 @@ xmesh = linspace(0,1.0,mspace)
 current_rank = 0
 state_vec = empty([nsteps, mspace])
 
-
+with open('out/viscous-burgers.w.000') as f:
+    lines = f.readlines()
+count = 0
+for line in lines:
+    line = line[6:]
+    split = line.split(',')
+    count2 = 0
+    for thing in split:
+        state_vec[count,count2] = float(split[count2])
+        count2+=1
+    count+=1
 
 # mpl.figure(1)
 # for x in range(0,mspace-1):
@@ -49,33 +59,15 @@ nx, ny = mspace, nsteps
 x = range(nx)
 y = range(ny)
 
-count=1
-for i in range(1, nsteps, nsteps/10):
-    
-    count+=1
 
-with open('advec-imp-step-seq.out.u.000') as f:
-    lines = f.readlines()
-count = 0
-counter=1
-for line in lines:
-    line = line[6:]
-    split = line.split(',')
-    count2 = 0
-    for thing in split:
-        state_vec[count,count2] = float(split[count2])
-        count2+=1
-    if count%5==0 or count+1==nsteps:
-        hf = plt.figure(counter)
-        ha = hf.add_subplot(111, projection='3d')
-        ranges = list(range(1,i,1))
-        X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data to be 2D
-        ha.plot_surface(X, Y, state_vec)
-        ha.set_xlabel('X (position)')
-        ha.set_ylabel('t (time)')
-        ha.set_zticklabels([])
-        ha.set_zticks([])
-        ha.w_zaxis.line.set_lw(0.)
-    count+=1
-    counter+=1
+hf = plt.figure(1)
+ha = hf.add_subplot(111, projection='3d')
+
+X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data to be 2D
+ha.plot_surface(X, Y, state_vec)
+ha.set_xlabel('X (position)')
+ha.set_ylabel('t (time)')
+ha.set_zlabel('U value')
+
+
 plt.show()

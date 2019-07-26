@@ -3,7 +3,7 @@ from matplotlib import pyplot as mpl
 from os import sys
 
 #get nsteps for time from the u file
-with open('ex-04.out.u.000') as f:
+with open('out/ex-04-omgrit-full-res.out.u.000') as f:
         lines = f.readlines()
 nsteps=len(lines)
 #create the t mesh
@@ -14,7 +14,7 @@ state_vec = zeros((nsteps,2))
 w_vec = zeros((nsteps,2))
 v_vec = zeros(nsteps)
 
-with open('ex-04.out.u.000') as f:
+with open('out/ex-04-omgrit-full-res.out.u.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
@@ -24,7 +24,7 @@ for line in lines:
     state_vec[count,1] = float(split[1])
     count+=1
 
-with open('ex-04.out.w.000') as f:
+with open('out/ex-04-omgrit-full-res.out.w.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
@@ -34,7 +34,7 @@ for line in lines:
     w_vec[count,1] = float(split[1])
     count+=1
 
-with open('ex-04.out.v.000') as f:
+with open('out/ex-04-omgrit-full-res.out.v.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
@@ -46,9 +46,10 @@ for line in lines:
 mpl.figure(1)
 mpl.plot(tmesh[1:], state_vec[:,0], '-b')
 mpl.plot(tmesh[1:], state_vec[:,1], '-k')
+mpl.ylabel('u')
 mpl.xlabel('time')
-mpl.title('State Solution Values')
-mpl.legend(['$u_{1}$', '$u_{2}$'])
+mpl.title('Solution Values')
+mpl.legend(['Component 1', 'Component 2'])
 
 mpl.figure(2)
 mpl.plot(tmesh[1:], w_vec[:,0], '-b')
@@ -60,7 +61,7 @@ mpl.legend(['Component 1', 'Component 2'])
 
 mpl.figure(3)
 mpl.plot(tmesh[1:], v_vec[:], '-b')
-mpl.ylabel('c')
+mpl.ylabel('v')
 mpl.xlabel('time')
-mpl.title('Control Solution Values')
+mpl.title('Solution Values')
 mpl.show()

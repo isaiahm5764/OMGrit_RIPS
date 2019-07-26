@@ -482,19 +482,19 @@ my_Access(braid_App          app,
       vec_copy(2, (u->values), (app->w[index]));
    }
 
-  {
-     char  filename[255];
-     FILE *file;
-     int  iter;
-     braid_AccessStatusGetIter(astatus, &iter);
-
-     braid_AccessStatusGetTIndex(astatus, &index);
-     sprintf(filename, "%s.%02d.%04d.%03d", "out/ex-04-omgrit-iter.out", iter, index, app->myid);
-     file = fopen(filename, "w");
-     fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
-     fflush(file);
-     fclose(file);
-  }
+//   {
+//      char  filename[255];
+//      FILE *file;
+//      int  iter;
+//      braid_AccessStatusGetIter(astatus, &iter);
+//
+//      braid_AccessStatusGetTIndex(astatus, &index);
+//      sprintf(filename, "%s.%02d.%04d.%03d", "ex-04.out", iter, index, app->myid);
+//      file = fopen(filename, "w");
+//      fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
+//      fflush(file);
+//      fclose(file);
+//   }
 
 
    return 0;
@@ -569,12 +569,11 @@ main(int argc, char *argv[])
    my_App     *app;
          
    double      tstart, tstop, dt, start, end, time; 
-   int         rank, ntime, arg_index;
+   int         rank, ntime, arg_index, mspace;
    double      gamma;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double      tol;
-   start=clock();
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -585,6 +584,7 @@ main(int argc, char *argv[])
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
 
+   mspace = 2;
    /* Define some optimization parameters */
    gamma = 0.005;            /* Relaxation parameter in the objective function */
 
@@ -596,7 +596,7 @@ main(int argc, char *argv[])
    maxiter        = 20;
    cfactor        = 2;
    tol            = 1.0e-6;
-   access_level   = 2;
+   access_level   = 1;
    print_level    = 2;
 
    /* Parse command line */
@@ -689,7 +689,13 @@ main(int argc, char *argv[])
    app->ntime    = ntime;
    app->gamma    = gamma;
    app->w        = NULL;
+   /* Set the initial condition for the system*/
+   double *U0 = (double*) malloc( mspace*sizeof(double) );
+   U0[0]=0.0;
+   U0[1]=-1.0; 
 
+   /**************** START TIMING HERE ****************/
+   start=clock();
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
@@ -712,99 +718,206 @@ main(int argc, char *argv[])
 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
+   /************************************COMPUTE U, V AND RESIDUAL****************************************/
+   
+   double norm = 0;
+
+   double **res = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) res[i] = (double *)malloc(mspace * sizeof(double));
+
+   double **res1 = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) res1[i] = (double *)malloc(mspace * sizeof(double));
+         
+   double **u = (double **)malloc(ntime * sizeof(double*));
+   for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));         
+         
+   double *v = (double*) malloc(ntime * sizeof(double) );
 
    if (access_level > 0)
-   {
-      /* Print adjoint w to file */
       {
-         char  filename[255];
-         FILE *file;
-         int   i;
-
-         sprintf(filename, "%s.%03d", "ex-04.out.w", (app->myid));
-         file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), w[i][0], w[i][1]);
-         }
-         fflush(file);
-         fclose(file);
-      }
-
-      /* Compute state u from adjoint w and print to file */
-      {
-         char    filename[255];
-         FILE   *file;
-         int     i;
-         double *u;
-
-         sprintf(filename, "%s.%03d", "ex-04.out.u", (app->myid));
-         file = fopen(filename, "w");
-         vec_create(2, &u);
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-
-            if ((i+1) < (app->ntime))
+         /* Compute state u from adjoint w */
+            for (int i = 0; i < (app->ntime); i++)
             {
-               vec_copy(2, w[i+1], u);
-               apply_PhiAdjoint(dt, u);
-               vec_axpy(2, -1.0, w[i], u);
-            }
-            else
+               double **w = (app->w);
+
+               if ((i+1) < (app->ntime))
+               {
+                  vec_copy(2, w[i+1], u[i]);
+                  apply_PhiAdjoint(dt, u[i]);
+                  vec_axpy(2, -1.0, w[i], u[i]);
+               }
+               else
+               {
+                  vec_copy(2, w[i], u[i]);
+                  vec_scale(2, -1.0, u[i]);
+               }
+               apply_Uinv(dt, u[i]);
+            }         
+
+         /* Compute control v from adjoint w */
+            for (int i = 0; i < (app->ntime); i++)
             {
-               vec_copy(2, w[i], u);
-               vec_scale(2, -1.0, u);
+               double **w = (app->w);
+
+               v[i]=w[i][1];
+               v[i]=v[i]/(2*gamma);
             }
-            apply_Uinv(dt, u);
-
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), u[0], u[1]);
-         }
-         vec_destroy(u);
-         fflush(file);
-         fclose(file);
       }
 
-      /* Compute control v from adjoint w and print to file */
-      {
-         char    filename[255];
-         FILE   *file;
-         int     i;
-         double *v;
-
-         sprintf(filename, "%s.%03d", "ex-04.out.v", (app->myid));
-         file = fopen(filename, "w");
-         vec_create(2, &v);
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-
-            apply_DAdjoint(dt, w[i], v);
-            vec_scale(1, -1.0, v);
-            apply_Vinv(dt, (app->gamma), v);
-
-            fprintf(file, "%05d: % 1.14e\n", (i+1), v[0]);
-         }
-         vec_destroy(v);
-         fflush(file);
-         fclose(file);
-      }
-   }
-
+   /**************** END TIME HERE ****************/
    end=clock();
    time = (double)(end-start)/CLOCKS_PER_SEC;
-   printf("Total Run Time: %f s \n", time);
+  
+   /****************************RESIDUAL*********************************/
+
+      /* Compute residual for block Lu^(k+1)+Dv^(k+1)-g */
+      double **w = (app->w);
+      vec_copy(mspace, u[0], res[0]);
+      apply_Phi(dt, res[0]);
+      
+      res[0][1]=res[0][1]-dt*v[0];
+
+      vec_axpy(mspace, -1.0, U0, res[0]);
+
+      for (int i = 1; i < ntime; i++)
+      {
+         vec_copy(mspace, u[i], res[i]);
+         apply_Phi(dt, res[i]);
+         vec_axpy(mspace, -1.0, u[i-1], res[i]);
+         
+         res[i][1]=res[i][1]-dt*v[i];
+      }
+      for(int i = 0; i < ntime; i++)
+      {
+         for (int j = 0; j < mspace; j++)
+         {
+            norm = norm + res[i][j]*res[i][j];
+         }
+      }
+
+      /* Compute residual for block Uu^(k+1)+L*w^(k+1)-k */
+      for(int i = 0; i < ntime-1; i++)
+      {
+         vec_copy(mspace, u[i], res[i]);
+         vec_scale(mspace, 2*dt, res[i]);
+
+         vec_copy(mspace, w[i], res1[i]);
+         apply_PhiAdjoint(dt, res1[i]);
+         vec_axpy(mspace, 1.0, res1[i], res[i]);
+
+         vec_copy(mspace, w[i+1], res1[i]);
+         vec_axpy(mspace, -1.0, res1[i], res[i]);
+      }
+      vec_copy(mspace, u[ntime-1], res[ntime-1]);
+      vec_scale(mspace, 2*dt, res[ntime-1]);
+
+      vec_copy(mspace, w[ntime-1], res1[ntime-1]);
+      apply_PhiAdjoint(dt, res1[ntime-1]);
+      vec_axpy(mspace, 1.0, res1[ntime-1], res[ntime-1]);
+      for(int i = 0; i < ntime; i++)
+      {
+         for (int j = 0; j < mspace; j++)
+         {
+            norm = norm + res[i][j]*res[i][j];
+         }
+      }
+
+      /* Compute residual for block D*w^(k+1)+Vv^(k+1)-0 */
+      for(int i = 0; i< ntime; i++)
+      {
+         res[i][0]=2*gamma*dt*v[i];
+         res[i][0]=res[i][0]-dt*w[i][1];
+         norm = norm + res[i][0]*res[i][0];
+      }          
+      norm = sqrt(norm);
+      norm = sqrt(norm);      
+      printf("\nThe full system residual is\n");
+      printf("%f", norm);
+      printf("\n");
+      printf("The total run time is: ");
+      printf("%f", time);
+      printf(" seconds\n");   
+   
+   /*************** Print out v, w, u and U0 **************/
+  
+   /**********************PRINT W OUT**********************/
+   char  filename[255];
+   FILE *file;
+   int   i;
+   sprintf(filename, "%s.%03d", "out/ex-04-omgrit-full-res.out.w", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
    {
+      /*double **w = (app->w);*/
+      fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), w[i][0], w[i][1]);
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT V OUT**********************/
+   sprintf(filename, "%s.%03d", "out/ex-04-omgrit-full-res.out.v", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      fprintf(file, "%05d: % 1.14e\n", (i+1), v[0]);
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT U OUT**********************/
+   sprintf(filename, "%s.%03d", "out/ex-04-omgrit-full-res.out.u", 000);
+   file = fopen(filename, "w");
+   for (i = 0; i < (app->ntime); i++)
+   {
+      fprintf(file, "%05d: % 1.14e, % 1.14e\n", (i+1), u[i][0], u[i][1]);
+   }
+   fflush(file);
+   fclose(file);
+
+   /**********************PRINT TIME OUT**********************/
+   {
+      /*
       char    filename[255];
       FILE   *file;
-      sprintf(filename, "%s.%d", "out/ex-04-omgrit.time", ntime);
+      */
+      sprintf(filename, "%s.%d", "out/ex-04-omgrit-full-res.time", maxiter);
       file = fopen(filename, "w");
       fprintf(file, "%f", time);
       fflush(file);
       fclose(file);
    }
+
+   /**********************PRINT TOTAL RES OUT**********************/
+   {
+      /*
+      char    filename[255];
+      FILE   *file;
+      */
+      sprintf(filename, "%s.%d", "out/ex-04-omgrit-full-res.res", maxiter);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", norm);
+      fflush(file);
+      fclose(file);
+   }   
+
+      /**********************PRINT OUT IF CONVERGE OR DIVERGE**********************/
+   {
+      sprintf(filename, "%s.%d.%f", "out/ex-04-omgrit-full-res.conv", ntime, gamma);
+      file = fopen(filename, "w");
+      if (isinf(norm)||isnan(norm))
+      {
+         fprintf(file, "%f", 0.0);
+      }
+      else
+      {
+         fprintf(file, "%f", 1.0);
+      }
+     
+      fflush(file);
+      fclose(file);
+   }
+
+   
 
    free(app);
    

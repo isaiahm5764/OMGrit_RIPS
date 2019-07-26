@@ -133,8 +133,8 @@ vec_scale(int size, double alpha, double *x)
 void
 apply_Phi(double dt, double *u)
 {
-   u[0] = u[0] + dt*u[1];
-   u[1] = u[1] - dt*u[1];
+   u[0] = u[0] - dt*u[1];
+   u[1] = u[1] + dt*u[1];
 }
 
 /*------------------------------------*/
@@ -142,7 +142,7 @@ apply_Phi(double dt, double *u)
 void
 apply_PhiAdjoint(double dt, double *w)
 {
-   w[1] = w[1] - dt*w[1] + dt*w[0];
+   w[1] = w[1] + dt*w[1] - dt*w[0];
 }
 
 /*------------------------------------*/
@@ -224,7 +224,9 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = U_i^{-1} u */
    vec_copy(2, (r->values), utmp);
+   apply_PhiAdjoint(dt, utmp);
    apply_Uinv(dt, utmp);
+   apply_Phi(dt, utmp);
    vec_copy(2, utmp, rtmp);
 
    /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
@@ -239,9 +241,7 @@ my_TriResidual(braid_App       app,
    if (uleft != NULL)
    {
       vec_copy(2, (r->values), utmp);
-      apply_PhiAdjoint(dt, utmp);
       apply_Uinv(dt, utmp);
-      apply_Phi(dt, utmp);
       vec_axpy(2, 1.0, utmp, rtmp);
    }
 
@@ -250,8 +250,7 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp - Phi_i U_{i-1}^{-1} uleft */
       vec_copy(2, (uleft->values), utmp);
-      apply_Uinv(dt, utmp);
-      apply_Phi(dt, utmp);
+      apply_PhiAdjoint(dt, utmp);
       vec_axpy(2, -1.0, utmp, rtmp);
    }
    
@@ -260,8 +259,7 @@ my_TriResidual(braid_App       app,
    {
       /* rtmp = rtmp - U_i^{-1} Phi_{i+1}^T uright */
       vec_copy(2, (uright->values), utmp);
-      apply_PhiAdjoint(dt, utmp);
-      apply_Uinv(dt, utmp);
+      apply_Phi(dt, utmp);
       vec_axpy(2, -1.0, utmp, rtmp);
    }
 
@@ -271,7 +269,6 @@ my_TriResidual(braid_App       app,
       /* rtmp = rtmp + g; g = Phi_0 u_0 */
       utmp[0] =  0.0;
       utmp[1] = -1.0;
-      apply_Phi(dt, utmp);
       vec_axpy(2, 1.0, utmp, rtmp);
    }
 
@@ -305,7 +302,7 @@ my_TriSolve(braid_App       app,
             braid_Int       homogeneous,
             braid_TriStatus status)
 {
-   double  t, tprev, tnext, dt;
+   double  t, tprev, tnext, dt, coeff, temp;
    double  gamma = (app->gamma);
    double *utmp, *rtmp;
    
@@ -329,23 +326,46 @@ my_TriSolve(braid_App       app,
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
-   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
-    *
-    * Using \tilde{C} = | 1/dt            0             |
-    *                   |  0    ( 1/dt + dt/(2*gamma) ) |
-    */
+   /* Apply center block preconditioner (multiply by C^-1) to -r */
    rtmp = (u->values);
    if (uleft != NULL)
    {
-      rtmp[0] = -rtmp[0]*dt;
-      rtmp[1] = -rtmp[1]/(1/dt + dt/(2*gamma));
+      double det = ((2+dt*dt)/(2*dt))*((1+(1+dt)*(1+dt) + dt*dt/gamma)/(2*dt)) - ((-dt-dt*dt)/(2*dt))*((-dt-dt*dt)/(2*dt));
+      double A = (1+(1+dt)*(1+dt)+(dt*dt/gamma))/(2*dt);
+      double B = (dt + dt*dt)/(2*dt);
+      double C = (dt+dt*dt)/(2*dt);
+      double D = (2+dt*dt)/(2*dt);
+
+      temp = -rtmp[0] * (1/det)*A + -rtmp[1]*(1/det)*B;
+      rtmp[1] = -rtmp[0] * (1/det)*C + -rtmp[1]*(1/det)*D;
+      rtmp[0] = temp;
+      
    }
    else
    {
-      /* At the leftmost point, use a different center coefficient approximation */
-      rtmp[0] = -rtmp[0]*(2*dt);
-      rtmp[1] = -rtmp[1]/(1/(2*dt) + dt/(2*gamma));
+       //At the leftmost point, use a different center coefficient approximation 
+      double det = ((1+dt*dt)/(2*dt))*(((1+dt)*(1+dt) + dt*dt/gamma)/(2*dt)) - ((-dt-dt*dt)/(2*dt))*((-dt-dt*dt)/(2*dt));
+      double A = ((1+dt)*(1+dt)+(dt*dt/gamma))/(2*dt);
+      double B = (dt + dt*dt)/(2*dt);
+      double C = (dt+dt*dt)/(2*dt);
+      double D = (1+dt*dt)/(2*dt);
+
+      temp = -rtmp[0] * (1/det)*A + -rtmp[1]*(1/det)*B;
+      rtmp[1] = -rtmp[0] * (1/det)*C + -rtmp[1]*(1/det)*D;
+      rtmp[0] = temp;
    }
+   // rtmp = (u->values);
+   // if (uleft != NULL)
+   // {
+   //    rtmp[0] = -rtmp[0]*dt;
+   //    rtmp[1] = -rtmp[1]/(1/dt + dt/(2*gamma));
+   // }
+   // else
+   // {
+   //     //At the leftmost point, use a different center coefficient approximation 
+   //    rtmp[0] = -rtmp[0]*(2*dt);
+   //    rtmp[1] = -rtmp[1]/(1/(2*dt) + dt/(2*gamma));
+   // }
 
    /* Complete residual update */
    vec_axpy(2, 1.0, utmp, rtmp);
@@ -482,19 +502,19 @@ my_Access(braid_App          app,
       vec_copy(2, (u->values), (app->w[index]));
    }
 
-  {
-     char  filename[255];
-     FILE *file;
-     int  iter;
-     braid_AccessStatusGetIter(astatus, &iter);
-
-     braid_AccessStatusGetTIndex(astatus, &index);
-     sprintf(filename, "%s.%02d.%04d.%03d", "out/ex-04-omgrit-iter.out", iter, index, app->myid);
-     file = fopen(filename, "w");
-     fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
-     fflush(file);
-     fclose(file);
-  }
+//   {
+//      char  filename[255];
+//      FILE *file;
+//      int  iter;
+//      braid_AccessStatusGetIter(astatus, &iter);
+//
+//      braid_AccessStatusGetTIndex(astatus, &index);
+//      sprintf(filename, "%s.%02d.%04d.%03d", "ex-04.out", iter, index, app->myid);
+//      file = fopen(filename, "w");
+//      fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
+//      fflush(file);
+//      fclose(file);
+//   }
 
 
    return 0;
@@ -596,7 +616,7 @@ main(int argc, char *argv[])
    maxiter        = 20;
    cfactor        = 2;
    tol            = 1.0e-6;
-   access_level   = 2;
+   access_level   = 1;
    print_level    = 2;
 
    /* Parse command line */
@@ -749,8 +769,8 @@ main(int argc, char *argv[])
 
             if ((i+1) < (app->ntime))
             {
-               vec_copy(2, w[i+1], u);
-               apply_PhiAdjoint(dt, u);
+               vec_copy(2, w[i], u);
+               apply_Phi(dt, u);
                vec_axpy(2, -1.0, w[i], u);
             }
             else

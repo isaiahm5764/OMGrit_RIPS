@@ -211,10 +211,26 @@ int main (int argc, char *argv[])
    if (iter == maxiter)
    {
       printf("\n Max. number of iterations reached.\n\n");
+
+      char    filename[255];
+      FILE   *file;
+      sprintf(filename, "out/ex-04-grad.conv.%d.%f", ntime, gamma);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", 0.0);
+      fflush(file);
+      fclose(file);
    }
    else
    {
       printf("\n Optimization has converged.\n\n");
+
+      char    filename[255];
+      FILE   *file;
+      sprintf(filename, "out/ex-04-grad.conv.%d.%f", ntime, gamma);
+      file = fopen(filename, "w");
+      fprintf(file, "%f", 1.0);
+      fflush(file);
+      fclose(file);
    }
 
    end=clock();

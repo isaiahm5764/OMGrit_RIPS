@@ -89,16 +89,11 @@ dt=1./nt
 tmesh2 = linspace(0,1.0,nt)
 for t in tmesh2:
     state_actual[count][0] = exp(-t) - 1
-    for ts in linspace(0,t,count):
-        state_actual[count][0] += (1-exp(.5-t)*v_vec[nt/2])*dt
     count+=1
-print(dt)
 count=0
 tmesh2 = linspace(0,1.0,nt)
 for t in tmesh2:
     state_actual[count][1] = -exp(-t)
-    for ts in linspace(0,t,count):
-        state_actual[count][1] += (exp(.5-t)*v_vec[nt/2])*dt
     count+=1
 
 
@@ -108,8 +103,8 @@ mpl.plot(ntime, ex_04_serial, '-k')
 mpl.plot(ntime, ex_04_omgrit, '-g')
 mpl.xlabel('Number of time steps')
 mpl.ylabel('Run Time (s)')
-mpl.title('Run times for Linear Quadratic Optimal Control Problem')
-mpl.legend(['Serial steepest descent', 'OMGrit'])
+mpl.title('Run times for Linear Quadratic Optimal Control Problem ($\gamma=0.005$)')
+mpl.legend(['Gradient descent', 'OMGrit'])
 
 mpl.figure(2)
 mpl.plot(tmesh[1:], state_serial[:,0], '-k')
