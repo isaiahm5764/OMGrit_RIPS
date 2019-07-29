@@ -22,24 +22,17 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-omgrit.c
+ * Example:       viscous-burgers-4
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  viscous-burgers-4
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
- *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ * Description:  Solves the viscous burgers equation. Lax-Friedrich Forward Time.
+ *               "Non-linear Jacobi relaxation" with non-linearity replaced by previous time solution.
+ *                  
  **/
 
 #include <stdlib.h>
@@ -189,12 +182,12 @@ my_TriResidual(braid_App       app,
 
 
    vec_copy(mspace, (r->values), utmp);
-   utmp[0] = -b(dt,dx,nu)*utmp[1]+utmp[0]*(1+2*b(dt,dx,nu));
+   utmp[0] = (0.5-b(dt,dx,nu))*utmp[1]+utmp[0]*(2*b(dt,dx,nu));
    for(int i = 1; i <= mspace-2; i++)
    {
-    utmp[i] = -b(dt,dx,nu)*(utmp[i-1]+utmp[i+1])+utmp[i]*(1+2*b(dt,dx,nu));
+    utmp[i] = (0.5-b(dt,dx,nu))*(utmp[i-1]+utmp[i+1])+utmp[i]*(2*b(dt,dx,nu));
    }
-   utmp[mspace-1] = -b(dt,dx,nu)*(utmp[mspace-2])+utmp[mspace-1]*(1+2*b(dt,dx,nu));
+   utmp[mspace-1] = (0.5-b(dt,dx,nu))*(utmp[mspace-2])+utmp[mspace-1]*(2*b(dt,dx,nu));
 
    vec_copy(mspace, utmp, rtmp);
 
@@ -296,14 +289,14 @@ my_TriSolve(braid_App       app,
 
    rtmp = (u->values);
 
-   rtmp[0] = (-1/(1+2*b(dt,dx,nu)))*rtmp[0]; 
+   rtmp[0] = (-1/(2*b(dt,dx,nu)))*rtmp[0]; 
    /*printf("1 entry divided by %lf \n", (1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[1])));*/
    for(int i = 1; i <= mspace-2; i++)
    {
-    rtmp[i] = (-1/(1+2*b(dt,dx,nu)))*rtmp[i];
+    rtmp[i] = (-1/(2*b(dt,dx,nu)))*rtmp[i];
     /*printf("%d entry divided by %lf \n", i+1,(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1])));*/
    }
-   rtmp[mspace-1] = (-1/(1+2*b(dt,dx,nu)))*rtmp[mspace-1]; 
+   rtmp[mspace-1] = (-1/(2*b(dt,dx,nu)))*rtmp[mspace-1]; 
    /*printf("%d entry divided by %lf \n\n", mspace, (1+2*b(dt,dx,nu)+g(dt,dx)*(-utmp[mspace-2])));*/
 
 
@@ -456,26 +449,26 @@ my_Access(braid_App          app,
 
    /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
 
-     char  filename[255];
-     FILE *file;
-     int  iter;
-     braid_AccessStatusGetIter(astatus, &iter);
-     braid_AccessStatusGetTIndex(astatus, &index);
-     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-     if(iter%1==0){
-        sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
-        file = fopen(filename, "w");
-        for(int i = 0; i<mspace; i++){
-            if(i<mspace-1){
-               fprintf(file, "%1.14e, ", (u->values)[i]);
-            }
-            else{
-               fprintf(file, "%1.14e", (u->values)[i]);
-            }
-        }
-     fflush(file);
-     fclose(file);
-     }
+   //   char  filename[255];
+   //   FILE *file;
+   //   int  iter;
+   //   braid_AccessStatusGetIter(astatus, &iter);
+   //   braid_AccessStatusGetTIndex(astatus, &index);
+   //   /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+   //   if(iter%1==0){
+   //      sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
+   //      file = fopen(filename, "w");
+   //      for(int i = 0; i<mspace; i++){
+   //          if(i<mspace-1){
+   //             fprintf(file, "%1.14e, ", (u->values)[i]);
+   //          }
+   //          else{
+   //             fprintf(file, "%1.14e", (u->values)[i]);
+   //          }
+   //      }
+   //   fflush(file);
+   //   fclose(file);
+   //   }
 
    return 0;
 }
@@ -747,7 +740,7 @@ main(int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "out/viscous-burgers-2.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/viscous-burgers-4.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {

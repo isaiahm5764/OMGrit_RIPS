@@ -21,25 +21,18 @@
  *
  ***********************************************************************EHEADER*/
 
- /**
- * Example:       advec-diff-omgrit.c
+/**
+ * Example:       viscous-burgers-3
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  viscous-burgers-3
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
- *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ * Description:  Solves the viscous burgers equation. Lax-Friedrich Forward Time.
+ *               "Non-linear Jacobi relaxation" with full non-linear terms.
+ *                  
  **/
 
 #include <stdlib.h>
@@ -216,7 +209,7 @@ my_TriResidual(braid_App       app,
       // {
       //   rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(u2tmp[i+1]-u2tmp[i-1]);
       // }
-      // rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(u2tmp[mspace-2]);
+      // rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
    }
 
 
