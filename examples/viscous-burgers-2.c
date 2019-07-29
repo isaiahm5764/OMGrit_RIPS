@@ -211,12 +211,12 @@ my_TriResidual(braid_App       app,
       vec_copy(mspace, (r->values), utmp);
       vec_copy(mspace, (uleft->values), u2tmp);
       vec_axpy(mspace, -1.0, u2tmp, rtmp);
-      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(utmp[1]);
+      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(u2tmp[1]);
       for(int i = 1; i <= mspace-2; i++)
       {
-        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(utmp[i+1]-utmp[i-1]);
+        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(u2tmp[i+1]-u2tmp[i-1]);
       }
-      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(utmp[mspace-2]);
+      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(u2tmp[mspace-2]);
    }
 
 
