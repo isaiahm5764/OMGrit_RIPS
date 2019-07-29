@@ -196,7 +196,7 @@ my_TriResidual(braid_App       app,
 
    /* Compute action of west block 
     *  Previous time contribution as mentioned above. This term contains the 
-    *  non-linearity so depends on previous and current 
+    *  non-linearity.
     */
 
    if (uleft != NULL)
