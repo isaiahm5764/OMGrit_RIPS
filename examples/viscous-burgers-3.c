@@ -176,8 +176,7 @@ my_TriResidual(braid_App       app,
 
    /* Compute action of center block:
     *  This is just applying the non-linear operator i.e computing Au. 
-    *  However this part is linear as the "non-linearity" depends on 
-    *  the previous time solution, dealt with below in "West Block"  
+    *    
     */
 
 
@@ -195,8 +194,7 @@ my_TriResidual(braid_App       app,
 
 
    /* Compute action of west block 
-    *  Previous time contribution as mentioned above. This term contains the 
-    *  non-linearity so depends on previous and current 
+    *  Previous time contribution as mentioned above. 
     */
 
    if (uleft != NULL)
