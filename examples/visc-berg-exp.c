@@ -36,7 +36,7 @@
  * 
  *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
  *                        u(0,t)=u(1,t)=0
- *												u(x,0)=u0(x)
+ *                                  u(x,0)=u0(x)
  *
  *               Implements a steepest-descent optimization iteration
  *               using fixed step size for design updates.   
@@ -45,10 +45,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "braid.h"
 #include "braid_test.h"
 #define PI 3.14159265
+#define g(dt,dx) dt/(4*dx)
+#define b(dt,dx,nu) nu*dt/(dx*dx)
 /*--------------------------------------------------------------------------
  * My App and Vector structures
  *--------------------------------------------------------------------------*/
@@ -64,6 +67,9 @@ typedef struct _braid_App_struct
 
    double **w;           /* Adjoint vectors at each time point on my proc */
    double *U0;
+   double *ai;
+   double *li;
+
 
 } my_App;
 
@@ -127,105 +133,130 @@ vec_scale(int size, double alpha, double *x)
    }
 }
 
-/*--------------------------------------------------------------------------
- * KKT component routines
- *--------------------------------------------------------------------------*/
-
-/* This is the K=[A B C] matrix. It acts on a vector in R^M */
-/* This function requies that M>=3, but this can easily be fixed later */
 void
-apply_Phi(double dt, double dx, double nu, int M, double *u)
-{	 
-	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
-	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
-	 double B = 1 - ((2*nu*dt)/(dx*dx));
-	 double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
-	 double tmp_u_1 = u[0];
-	 double tmp_u_2 = u[1];
-	 double tmp_u_Mm1 = u[M-2];
-	 double tmp_u_M = u[M-1];
-	 
-	 
-	 for (int i = 1; i <= M - 2; i++)
-	 {
-		 u[i] = A*u[i-1] + B*u[i] + C*u[i+1];
-	 }
-	 
-	 /* Deal with the u_1 and u_M vectors seperately */
-	 u[0] = B*tmp_u_1 + C*tmp_u_2;
-	 u[M-1] = A*tmp_u_Mm1 + B*tmp_u_M;
+apply_PhiInv(double dt, double dx, double nu, int M, double *u, double *l, double *a)
+{   
+   /* First solve Lw=u (Lw=f) */
+   double *w;
+   vec_create(M, &w);
+   double *f;
+   vec_create(M, &f);
+   vec_copy(M, u, f);
+   w[0]=f[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=f[i]-l[i-1]*w[i-1];
+   }
+
+   /* Now solve Ux=w */ 
+   double b = g(dt,dx)-b(dt, dx, nu);
+   u[M-1]=w[M-1]/a[M-1];
+   for (int i = M-2; i >= 0; i--)
+   {
+      u[i]=(w[i]-b*u[i+1])/a[i];      
+   }
 }
 
 /*------------------------------------*/
 
 void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *w)
+apply_PhiAdjointInv(double dt, double dx, double nu, int M, double *u, double *l, double *a)
 {
-	 /* Define the A,B,C as in the stencil. These can maybe moved to the app struct */
-	 /* Also copy the initial values of u_1, u_2, u_M-1, u_M */
-	 double A = ((dt*nu)/(dx*dx)) + (dt/(2*dx));
-    double B = 1 - ((2*nu*dt)/(dx*dx));
-    double C = (dt*nu)/(dx*dx) - (dt/(2*dx));
-	 double tmp_w_1 = w[0];
-	 double tmp_w_2 = w[1];
-	 double tmp_w_Mm1 = w[M-2];
-	 double tmp_w_M = w[M-1];
-	 
-	 
-	 for (int i = 1; i <= M - 2; i++)
-	 {
-		 w[i] = C*w[i-1] + B*w[i] + A*w[i+1];
-	 }
-	 
-	 /* Deal with the u_1 and u_M vectors seperately */
-	 w[0] = B*tmp_w_1 + A*tmp_w_2;
-	 w[M-1] = C*tmp_w_Mm1 + B*tmp_w_M;
-}
+   /* First solve U^Tw=u (U^Tw=f) */
 
-/*------------------------------------*/
+   /* Need to change this w to some other letter becuase w is already passed as a parameter of this function */
+   double *w;
 
-void
-apply_Uinv(double dt, double dx, int M, double *u)
-{
-   for (int i = 0; i <= M-1; i++)
-	 {
-		 u[i] /= dx*dt;
-	 }
-}
+   vec_create(M, &w);
+   double *f;
+   vec_create(M, &f);
+   vec_copy(M, u, f);
+   double b = g(dt,dx)-b(dt, dx, nu);
+   w[0]=f[0]/a[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=(f[i]-w[i-1]*b)/a[i];
+   }
 
-/*------------------------------------*/
-
-void
-apply_Vinv(double dt, double dx, double alpha, int M, double *v)
-{
-	for (int i = 0; i <= M-1; i++)
-	{
-		v[i] /= alpha*dx;
-	}
+   /* Now solve L^Tx=w */ 
    
+   u[M-1]=w[M-1];
+   for (int i = M-2; i >= 0; i--)
+   {
+      u[i]=w[i]-l[i]*u[i+1];      
+   }
 }
 
-/*------------------------------------*/
+/* Some helper functions declared below*/
 
-void
-apply_D(double dt, int M, double *v)
+/* A in the formulation papers. Just a matrix mult. */
+void 
+apply_Phi(double dt, int mspace, double nu, double *u)
 {
-	 for (int i = 0; i <= M-1; i++)
-	 {
-		 v[i] *= -dt;
-	 }
+  int M=mspace;
+  double dx = 1/((double)(mspace+1));
+  double A = b(dt, dx, nu);
+  double B = 1-2*b(dt, dx, nu);
+  double C = A;
+  double tmp_u_1 = u[0];
+   double tmp_u_2 = u[1];
+   double tmp_u_Mm1 = u[M-2];
+   double tmp_u_M = u[M-1];
+   
+   
+   for (int i = 1; i <= M - 2; i++)
+   {
+     u[i] = A*u[i-1] + B*u[i] + C*u[i+1];
+   }
+   
+   /* Deal with the u_1 and u_M vectors seperately */
+   u[0] = B*tmp_u_1 + C*tmp_u_2;
+   u[M-1] = A*tmp_u_Mm1 + B*tmp_u_M;
 }
 
-/*------------------------------------*/
-
 void
-apply_DAdjoint(double dt, int M, double *v)
+apply_PhiAdjoint(double dt, int mspace, double nu, double *w)
 {
-	 for (int i = 0; i <= M-1; i++)
-	 {
-		 v[i] /= -1;
-	 }
+  int M=mspace;
+  double dx = 1/((double)(mspace+1));
+  double A = b(dt, dx, nu);
+  double B = 1-2*b(dt, dx, nu);
+  double C = A;
+  double tmp_w_1 = w[0];
+   double tmp_w_2 = w[1];
+   double tmp_w_Mm1 = w[M-2];
+   double tmp_w_M = w[M-1];
+   
+   
+   for (int i = 1; i <= M - 2; i++)
+   {
+     w[i] = C*w[i-1] + B*w[i] + A*w[i+1];
+   }
+   
+   /* Deal with the u_1 and u_M vectors seperately */
+   w[0] = B*tmp_w_1 + A*tmp_w_2;
+   w[M-1] = C*tmp_w_Mm1 + B*tmp_w_M;
+}
+
+//applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
+void 
+apply_B(double dt, int mspace, double nu, double *u, double *uleft){
+  u[0] = 2*uleft[0] * u[1];
+  for(int i=1; i<mspace-1; i++)
+  {
+    u[i] = -2*uleft[i]*u[i-1] + 2*uleft[i]*u[i+1];
+  }
+  u[mspace-1] = -2*uleft[mspace-2];
+}
+
+void 
+find_gamma(double *u, int mspace){
+  u[0] = -u[1]*u[1];
+  for(int i=1; i<mspace-1; i++)
+  {
+    u[i] = u[i-1]*u[i-1] - u[i+1]*u[i+1];
+  }
+  u[mspace-1] = u[mspace-2] * u[mspace-2];
 }
 
 /*------------------------------------*/
@@ -247,11 +278,11 @@ my_TriResidual(braid_App       app,
 {
    double  t, tprev, tnext, dt, dx;
    double  nu = (app->nu);
-	double  alpha = (app->alpha);
-   double *rtmp, *utmp;
+   double *rtmp, *utmp, *u2tmp;
    int     level, index;
    int     mspace = (app->mspace);
    double *u0 = (app->U0);
+   double alpha = (app->alpha);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -274,61 +305,129 @@ my_TriResidual(braid_App       app,
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
    vec_create(mspace, &utmp);
+   vec_create(mspace, &u2tmp);
 
-   /* Compute action of center block */
+   /* CENTER BLOCK */
 
-   /* rtmp = U_i^{-1} u */
-   vec_copy(mspace, (r->values), utmp);
-   apply_Uinv(dt, dx, mspace, utmp);
-   vec_copy(mspace, utmp, rtmp);
+   if(uleft == NULL){
+    vec_copy(mspace, r->values, utmp);
+    vec_axpy(mspace, 1.0, utmp, rtmp);
+    vec_axpy(mspace, dx*dt, utmp, rtmp);
+    apply_B(dt, mspace, nu, utmp, u0);
+    vec_scale(mspace, alpha*g(dt,dx)*dx/dt, utmp);
+    vec_axpy(mspace, -1.0, utmp, rtmp);
+   }
+   else{
+    vec_copy(mspace, r->values, utmp);
+    apply_PhiAdjoint(dt, mspace, nu, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_scale(mspace, alpha*dx/(dt), utmp);
+    vec_axpy(mspace, 1.0, utmp, rtmp);
 
-   /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
-   vec_copy(mspace, (r->values), utmp);
-   apply_DAdjoint(dt, mspace, utmp);
-   apply_Vinv(dt, dx, alpha, mspace, utmp);
-   apply_D(dt, mspace, utmp);
-   vec_axpy(mspace, 1.0, utmp, rtmp);
+    vec_copy(mspace, r->values, utmp);
+    vec_axpy(mspace, alpha*dx/(dt), utmp, rtmp);
 
-   /* rtmp = rtmp + Phi_i U_{i-1}^{-1} Phi_i^T u */
-   /* This term is zero at time 0, since Phi_0 = 0 */
-   if (uleft != NULL)
-   {
-      vec_copy(mspace, (r->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
-      apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp);
+    vec_copy(mspace, r->values, utmp);
+    vec_axpy(mspace, dx*dt, utmp, rtmp);
+
+    vec_copy(mspace, r->values, utmp);
+    apply_B(dt, mspace, nu, utmp, uleft->values);
+    vec_scale(mspace, alpha*g(dt,dx)*dx/dt, utmp);
+    vec_axpy(mspace, -1.0, utmp, rtmp);
    }
 
-   /* Compute action of west block */
-   if (uleft != NULL)
+   //
+
+
+
+
+   /* WEST BLOCK */
+
+   if(uleft != NULL)
    {
-      vec_copy(mspace, (uleft->values), utmp);
-      apply_Uinv(dt, dx, mspace, utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
+    vec_copy(mspace, uleft->values, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, alpha*dx/dt, utmp, rtmp);
+
+    vec_copy(mspace, uleft->values, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    apply_B(dt, mspace, nu, utmp, uleft->values);
+    vec_axpy(mspace, -alpha*dx*g(dt,dx)/(dt), utmp, rtmp);
    }
+
+
+  /* EAST BLOCK */
+   if(uright!=NULL){
+   vec_copy(mspace, uright->values, utmp);
+   apply_PhiAdjoint(dt, mspace, nu, utmp);
+   vec_scale(mspace, alpha*dx/(dt), utmp);
+   vec_axpy(mspace, -1.0, utmp, rtmp);
+ }
+
    
-   /* Compute action of east block */
-   if (uright != NULL)
-   {
-      vec_copy(mspace, (uright->values), utmp);
-      apply_PhiAdjoint(dt, dx, nu, mspace, utmp);
-      apply_Uinv(dt, dx, mspace, utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
-   }
-
-   /* No change for index 0 */
-   if (!homogeneous)
+   //calculate f and subtract to find residual
+   if ((!homogeneous))
    {
       vec_copy(mspace, u0, utmp);
+      vec_axpy(mspace, -dx*dt, u0, rtmp);
+
+      vec_create(mspace, &utmp);
+      if(uleft==NULL){
+        vec_copy(mspace, u0, u2tmp);
+        apply_Phi(dt, mspace, nu, u2tmp);
+        vec_axpy(mspace, 1.0, u2tmp, utmp);
+
+        vec_copy(mspace, r->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);
+
+        vec_copy(mspace, uright->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        apply_PhiAdjoint(dt, mspace, nu, u2tmp);
+        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
+      }else if(uright==NULL){
+        vec_copy(mspace, r->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);       
+      }else{
+        vec_copy(mspace, r->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);
+
+        vec_copy(mspace, uright->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        apply_PhiAdjoint(dt, mspace, nu, u2tmp);
+        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
+      }
+      vec_scale(mspace, alpha*dx/(dt), utmp);
       vec_axpy(mspace, -1.0, utmp, rtmp);
+      vec_create(mspace, &utmp);
 
-      vec_copy(mspace, u0,utmp);
-      apply_Phi(dt, dx, nu, mspace, utmp);
-      vec_axpy(mspace, 1.0, utmp, rtmp); 
+      if(uleft==NULL){
+        vec_copy(mspace, u0, u2tmp);
+        apply_Phi(dt, mspace, nu, u2tmp);
+        vec_axpy(mspace, -1.0, u2tmp, utmp);
 
-   }
+        vec_copy(mspace, r->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
+        apply_B(dt, mspace, nu, utmp, r->values);
+        vec_scale(mspace, dx*g(dt,dx)*alpha/dt, utmp);
+        vec_axpy(mspace, 1.0, utmp, rtmp);
+      }
+      else{
+        vec_copy(mspace, r->values, u2tmp);
+        find_gamma(u2tmp, mspace);
+        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
+
+        apply_B(dt, mspace, nu, utmp, uleft->values);
+        vec_scale(mspace, dx*g(dt,dx)*alpha/dt, utmp);
+        vec_axpy(mspace, 1.0, utmp, rtmp);
+      }
+
+
+   } 
+
 
    /* Subtract rhs f */
    if (f != NULL)
@@ -342,27 +441,14 @@ my_TriResidual(braid_App       app,
    /* Destroy temporary vectors */
    vec_destroy(rtmp);
    vec_destroy(utmp);
-   
+   vec_destroy(u2tmp);
+
    return 0;
 }   
 
 /*------------------------------------*/
 
 /* Solve A(u) = f */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 int
 my_TriSolve(braid_App       app,
@@ -376,7 +462,11 @@ my_TriSolve(braid_App       app,
    double  t, tprev, tnext, dt, dx;
    double *utmp, *rtmp;
    int mspace = (app->mspace);
+   double nu = (app->nu);
    double alpha = (app->alpha);
+
+   double *l = (app->li);
+   double *a = (app->ai);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -390,11 +480,12 @@ my_TriSolve(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = 1/((double)(mspace+1));;
+   dx = 1/((double)(mspace+1));
 
 
    /* Create temporary vector */
    vec_create(mspace, &utmp);
+   vec_create(mspace, &rtmp);
 
    /* Initialize temporary solution vector */
    vec_copy(mspace, (u->values), utmp);
@@ -402,38 +493,22 @@ my_TriSolve(braid_App       app,
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
-   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
-    *
-    * Using [\tilde{C_i}] = [ (2/dx*dt + dt/alpha*dx)*I_M ]
-    * If we are looking at r_1, we can use the exact value of [C_[1]]=[(1+dt^2/alpha)*I_M]
-    */
 
-   
    rtmp = (u->values);
-   if (uleft != NULL)
-   {
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( 2/(dx*dt) + dt/(alpha*dx) );
-      }
-   }
-   else
-   {
-      /* At the leftmost point, use a different center coefficient approximation */
-      for(int i = 0; i<=mspace-1; i++)
-      {
-         rtmp[i] = -rtmp[i]/( (1 + dt*dt/alpha)/(dx*dt) );
-      }
-   }
-
-
+   vec_scale(mspace, -1.0*dx*dt, rtmp);
+   apply_PhiInv(dt, dx, nu, mspace, rtmp, l, a);
+   apply_PhiAdjointInv(dt, dx, nu, mspace, rtmp, l, a);
+   vec_scale(mspace, .5, rtmp);
 
 
    /* Complete residual update */
    vec_axpy(mspace, 1.0, utmp, (u->values));
+
+
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
+   
 
    return 0;
 }   
@@ -573,121 +648,28 @@ my_Access(braid_App          app,
       vec_copy(mspace, (u->values), (app->w[index]));
    }
 
-   /* Code below allows access to the solution value after certain iterations. This is then printed to an out file so the solution evolution over time can be seen.*/
+   /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
 
-   //       int  iter;
-   // braid_AccessStatusGetIter(astatus, &iter);
-   // if(iter%50==10){
-   // {
-   //       char  filename[255];
-   //       FILE *file;
-   //       int   i,j;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.w", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for(j=0; j <mspace; j++){
-   //             if(j==mspace-1){
-   //                fprintf(file, "% 1.14e", w[i][j]);
-   //             }
-   //             else{
-   //                fprintf(file, "% 1.14e, ", w[i][j]);
-   //             }
-   //          }
-   //          fprintf(file, "\n");
-   //       }
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-
-   //    /* Compute state u from adjoint w and print to file */
-   //    /* Not sure if this is completely correct - tom */
-   //    {
-   //       char    filename[255];
-   //       FILE   *file;
-   //       int     i, j;
-   //       double *u;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.u", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       vec_create(mspace, &u);
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-
-   //          if ((i+1) < (app->ntime))
-   //          {
-   //             vec_copy(mspace, w[i+1], u);
-   //             apply_PhiAdjoint(dt, dx, nu, mspace, u);
-   //             apply_Uinv(dt, dx, mspace, u);
-   //             vec_axpy(mspace, -1.0, w[i], u);
-   //          }
-   //          else
-   //          {
-   //             vec_copy(mspace, w[i], u);
-   //             vec_scale(mspace, -1.0, u);
-   //          }
-   //          vec_axpy(mspace, -1.0, U0, u);
-
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for (j = 0; j < mspace; j++)
-   //          {
-   //             fprintf(file, "% 1.14e, ", u[j]);
-   //          }
-   //          fprintf(file, "% 1.14e\n", u[mspace-1]);
-   //       }
-   //       vec_destroy(u);
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-
-   //    /* Compute control v from adjoint w and print to file */
-   //    /* V = (1/(alpha*dx))*aW */
-   //    {
-   //       char    filename[255];
-   //       FILE   *file;
-   //       int     i,j;
-   //       double *v;
-
-   //       sprintf(filename, "%s.%03d.%04d", "advec-diff.out.v", (app->myid), iter);
-   //       file = fopen(filename, "w");
-   //       vec_create((app->mspace), &v);
-   //       for (i = 0; i < (app->ntime); i++)
-   //       {
-   //          double **w = (app->w);
-
-   //          vec_axpy(mspace, 1/(alpha*dx),w[i],v );
-
-   //          /* TODO Dynamical print based on size of v */
-   //          fprintf(file, "%05d: ", (i+1));
-   //          for (j = 0; j < (app->mspace); j++)
-   //          {
-   //             fprintf(file, "% 1.14e, ", v[j]);
-   //          }
-   //          fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
-   //       }
-   //       vec_destroy(v);
-   //       fflush(file);
-   //       fclose(file);
-   //    }
-   // }
-//   {
-//      char  filename[255];
-//      FILE *file;
-//      int  iter;
-//      braid_AccessStatusGetIter(astatus, &iter);
-//
-//      braid_AccessStatusGetTIndex(astatus, &index);
-//      sprintf(filename, "%s.%02d.%04d.%03d", "ex-04.out", iter, index, app->myid);
-//      file = fopen(filename, "w");
-//      fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
-//      fflush(file);
-//      fclose(file);
-//   }
-
+     char  filename[255];
+     FILE *file;
+     int  iter;
+     braid_AccessStatusGetIter(astatus, &iter);
+     braid_AccessStatusGetTIndex(astatus, &index);
+     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+     if(iter%1==0){
+        sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
+        file = fopen(filename, "w");
+        for(int i = 0; i<mspace; i++){
+            if(i<mspace-1){
+               fprintf(file, "%1.14e, ", (u->values)[i]);
+            }
+            else{
+               fprintf(file, "%1.14e", (u->values)[i]);
+            }
+        }
+     fflush(file);
+     fclose(file);
+     }
 
    return 0;
 }
@@ -776,16 +758,17 @@ main(int argc, char *argv[])
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
+   ntime = 256;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
    nu    = 2;                /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 5;
+   max_levels     = 30;
    min_coarse     = 1;
-   nrelax         = 1;
-   nrelaxc        = 7;
+   nrelax         = 30;
+   nrelaxc        = 30;
    maxiter        = 300;
    cfactor        = 2;
    tol            = 1.0e-6;
@@ -892,16 +875,11 @@ main(int argc, char *argv[])
    }
 
 
-   /* Define the space step for dt computation */
-   dx=(double)1/(mspace+1);
-
-   /* Define time domain */
+   /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
-
-   /* Compute ntime and the time-step based on dx */
-
-   dt = (tstop-tstart)/(double)ntime;   
+   dt = (tstop-tstart)/ntime; 
+    
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
@@ -912,18 +890,37 @@ main(int argc, char *argv[])
    app->alpha    = alpha;
    app->w        = NULL;
 
-   /* Set this to whatever u0 is. Right now it's just one period of a cosine function  */
+   /* Set this to whatever u0 is. */
 
-   double *U0 = (double*) malloc( mspace*sizeof(double) );
-   for(int i=0; i<mspace; i++){
-      if(i<mspace/2-1){
+   double *U0 = (double*) malloc( ntime*sizeof(double) );
+   for(int i=0; i<mspace/2; i++){
       U0[i]=1;
-      }
-      else{
-         U0[i]=0;
-      }
    }
+
+   for(int i=mspace/2; i<mspace; i++)
+   {
+      U0[i]=0;
+   }
+
    app->U0       = U0;
+
+   dx = 1/((double)(mspace+1));
+
+   double *ai = (double*) malloc( mspace*sizeof(double) );
+   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
+   double A = b(dt,dx,nu);
+   double B = 1 -2*b(dt,dx,nu);
+   double C = A;
+   ai[0] = B;
+   for(int i=1; i<mspace; i++){
+      li[i-1] = A/ai[i-1];
+      ai[i] = ai[0]+(-C)*li[i-1];
+   }
+
+   app->ai = ai;
+   app->li = li;
+
+
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
@@ -947,19 +944,20 @@ main(int argc, char *argv[])
 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
-
-   dx = 1/((double)(mspace+1));;
    
 
    if (access_level > 0)
    {
-      /* Print adjoint w to file */
+
+      /* Print w to file, w is actually u, the notation is just carried over from the 
+      * optimization case. */
+
       {
          char  filename[255];
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "advec-diff.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/viscous-burgers-2.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->ntime); i++)
          {
@@ -978,98 +976,10 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
       }
-
-      /* Compute state u from adjoint w and print to file */
-      /* Not sure if this is completely correct - tom */
-      {
-         char    filename[255], filename1[255];
-         FILE   *file;
-         int     i, j;
-         double *u, *u1;
-
-         sprintf(filename1, "%s.%03d", "advec-diff.out.u0", (app->myid));
-         file = fopen(filename1, "w");
-         vec_create(mspace, &u);
-         vec_copy(mspace, U0, u);
-         for (j = 0; j < mspace; j++)
-            {
-               if(j!=mspace-1){
-                  fprintf(file, "% 1.14e, ", u[j]);
-               }
-               else{
-                  fprintf(file, "% 1.14e", u[j]);
-               }
-            }
-         vec_destroy(u);
-
-         sprintf(filename, "%s.%03d", "advec-diff.out.u", (app->myid));
-         file = fopen(filename, "w");
-         vec_create(mspace, &u);
-         vec_create(mspace, &u1);
-         double **w = (app->w);
-         for (i = 0; i < (app->ntime); i++)
-         {
-
-            if ((i+1) < (app->ntime))
-            {
-               vec_copy(mspace, w[i+1], u);
-               vec_copy(mspace, w[i], u1);
-               apply_PhiAdjoint(dt, dx, nu, mspace, u);
-               apply_Uinv(dt, dx, mspace, u);
-               apply_Uinv(dt, dx, mspace, u1);
-               vec_axpy(mspace, -1.0, u1, u);
-            }
-            else
-            {
-               vec_copy(mspace, w[i], u);
-               apply_Uinv(dt,dx,mspace,u);
-               vec_scale(mspace, -1.0, u);
-            }
-            vec_axpy(mspace, 1.0, u, U0);
-
-            fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < mspace; j++)
-            {
-               fprintf(file, "% 1.14e, ", U0[j]);
-            }
-            fprintf(file, "% 1.14e\n", u[mspace-1]);
-         }
-         vec_destroy(u);
-         vec_destroy(u1);
-         fflush(file);
-         fclose(file);
-      }
-
-      /* Compute control v from adjoint w and print to file */
-      /* V = (1/(alpha*dx))*aW */
-      {
-         char    filename[255];
-         FILE   *file;
-         int     i,j;
-         double *v;
-
-         sprintf(filename, "%s.%03d", "advec-diff.out.v", (app->myid));
-         file = fopen(filename, "w");
-         vec_create((app->mspace), &v);
-         for (i = 0; i < (app->ntime); i++)
-         {
-            double **w = (app->w);
-
-            vec_axpy(mspace, 1/(alpha*dx),w[i],v );
-
-            /* TODO Dynamical print based on size of v */
-            fprintf(file, "%05d: ", (i+1));
-            for (j = 0; j < (app->mspace); j++)
-            {
-               fprintf(file, "% 1.14e, ", v[j]);
-            }
-            fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
-         }
-         vec_destroy(v);
-         fflush(file);
-         fclose(file);
-      }
+      
    }
+
+
 
    free(app);
    

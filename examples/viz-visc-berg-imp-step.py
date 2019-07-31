@@ -2,7 +2,7 @@ from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
-with open('visc-berg-seq.out.u.000') as f:
+with open('visc-berg-imp-step.out.u.000') as f:
         lines = f.readlines()
 for line in lines:
     line = line[6:]
@@ -16,7 +16,7 @@ xmesh = linspace(0,1.0,mspace)
 current_rank = 0
 state_vec = empty([nsteps, mspace])
 
-with open('visc-berg-seq.out.u.000') as f:
+with open('visc-berg-imp-step.out.u.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
