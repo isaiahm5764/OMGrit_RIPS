@@ -237,6 +237,16 @@ my_TriResidual(braid_App       app,
       }
       rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
    }
+   else{
+      vec_copy(mspace, (r->values), utmp);
+      vec_copy(mspace, u0, u2tmp);
+      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(u2tmp[1]);
+      for(int i = 1; i <= mspace-2; i++)
+      {
+        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(u2tmp[i+1]-u2tmp[i-1]);
+      }
+      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
+   }
 
 
    /* Deals with initial condition, only affceting first equation */
