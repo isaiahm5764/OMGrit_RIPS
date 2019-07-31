@@ -22,24 +22,20 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-omgrit.c
+ * Example:       viscous-burgers-2
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  viscous-burgers-2
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
+ * Description:  Solves the viscous burgers equation. BTCS scheme.
+ *               "Non-linear Jacobi relaxation" with non-linearity
+ *               replaced by previous time solution.
  *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ *               Currently converges for some parameters
+ *                  
  **/
 
 #include <stdlib.h>
@@ -133,6 +129,29 @@ vec_scale(int size, double alpha, double *x)
    }
 }
 
+void
+apply_PhiInv(double dt, double dx, double nu, int M, double *u, double *l, double *a)
+{   
+   /* First solve Lw=u (Lw=f) */
+   double *w;
+   vec_create(M, &w);
+   double *f;
+   vec_create(M, &f);
+   vec_copy(M, u, f);
+   w[0]=f[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=f[i]-l[i-1]*w[i-1];
+   }
+
+   /* Now solve Ux=w */ 
+   double b = g(dt,dx)-b(dt, dx, nu);
+   u[M-1]=w[M-1]/a[M-1];
+   for (int i = M-2; i >= 0; i--)
+   {
+      u[i]=(w[i]-b*u[i+1])/a[i];      
+   }
+}
 
 /*------------------------------------*/
 
@@ -211,12 +230,12 @@ my_TriResidual(braid_App       app,
       vec_copy(mspace, (r->values), utmp);
       vec_copy(mspace, (uleft->values), u2tmp);
       vec_axpy(mspace, -1.0, u2tmp, rtmp);
-      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(utmp[1]);
+      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(u2tmp[1]);
       for(int i = 1; i <= mspace-2; i++)
       {
-        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(utmp[i+1]-utmp[i-1]);
+        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(u2tmp[i+1]-u2tmp[i-1]);
       }
-      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(utmp[mspace-2]);
+      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
    }
 
 
@@ -227,6 +246,7 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace,-1.0,utmp,rtmp);
 
    } 
+
 
    /* Subtract rhs f */
    if (f != NULL)
@@ -262,6 +282,9 @@ my_TriSolve(braid_App       app,
    double *utmp, *rtmp;
    int mspace = (app->mspace);
    double nu = (app->nu);
+
+   double *l = (app->li);
+   double *a = (app->ai);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -275,7 +298,7 @@ my_TriSolve(braid_App       app,
    }
 
    /* Get the space-step size */
-   dx = 1/((double)(mspace+1));;
+   dx = 1/((double)(mspace+1));
 
 
    /* Create temporary vector */
@@ -294,14 +317,35 @@ my_TriSolve(braid_App       app,
     * It's possible that this is not an appropriate relaxation method, more work needed.
     */
 
+   /* apply A inverse fully */
+   // vec_scale(mspace, -1.0, (u->values));
    rtmp = (u->values);
+
+   // double *w;
+   // vec_create(mspace, &w);
+   // double *fs;
+   // vec_create(mspace, &fs);
+   // vec_copy(mspace, (u->values), fs);
+   // w[0]=fs[0];
+   // for (int i = 1; i < mspace; i++)
+   // {
+   //    w[i]=fs[i]-l[i-1]*w[i-1];
+   // }
+
+   // /* Now solve Ux=w */ 
+   // double b = g(dt,dx)-b(dt,dx,nu);
+   // (u->values)[mspace-1]+=w[mspace-1]/a[mspace-1];
+   // for (int i = mspace-2; i >= 0; i--)
+   // {
+   //    (u->values)[i]+=(w[i]-b*(u->values)[i+1])/a[i];      
+   // }
 
    rtmp[0] = (-1/(1+2*b(dt,dx,nu)))*rtmp[0]; 
    /*printf("1 entry divided by %lf \n", (1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[1])));*/
    for(int i = 1; i <= mspace-2; i++)
    {
     rtmp[i] = (-1/(1+2*b(dt,dx,nu)))*rtmp[i];
-    /*printf("%d entry divided by %lf \n", i+1,(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1])));*/
+    //printf("%d entry divided by %lf \n", i+1,(1+2*b(dt,dx,nu)+g(dt,dx)*(utmp[i+1]-utmp[i-1])));
    }
    rtmp[mspace-1] = (-1/(1+2*b(dt,dx,nu)))*rtmp[mspace-1]; 
    /*printf("%d entry divided by %lf \n\n", mspace, (1+2*b(dt,dx,nu)+g(dt,dx)*(-utmp[mspace-2])));*/
@@ -551,7 +595,7 @@ main(int argc, char *argv[])
    braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt; 
+   double      tstart, tstop, dt, dx; 
    int         rank, ntime, mspace, arg_index;
    double      alpha, nu;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
@@ -709,6 +753,22 @@ main(int argc, char *argv[])
    }
 
    app->U0       = U0;
+
+   dx = 1/((double)(mspace+1));
+
+   double *ai = (double*) malloc( mspace*sizeof(double) );
+   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
+   double A = -b(dt,dx,nu);
+   double B = 1 +2*b(dt,dx,nu);
+   double C = A;
+   ai[0] = B;
+   for(int i=1; i<mspace; i++){
+      li[i-1] = A/ai[i-1];
+      ai[i] = ai[0]+(-C)*li[i-1];
+   }
+
+   app->ai = ai;
+   app->li = li;
 
 
 

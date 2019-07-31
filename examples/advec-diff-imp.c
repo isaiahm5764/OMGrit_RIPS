@@ -309,6 +309,7 @@ my_TriResidual(braid_App       app,
    double *u0 = (app->U0);
    double *li = (app->li);
    double *ai = (app->ai);
+
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -323,6 +324,8 @@ my_TriResidual(braid_App       app,
    {
       dt = t - tprev;
    }
+
+   
 
 
    /* Get the space-step size */
