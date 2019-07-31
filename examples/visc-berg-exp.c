@@ -149,7 +149,7 @@ apply_PhiInv(double dt, double dx, double nu, int M, double *u, double *l, doubl
    }
 
    /* Now solve Ux=w */ 
-   double b = g(dt,dx)-b(dt, dx, nu);
+   double b = b(dt, dx, nu);
    u[M-1]=w[M-1]/a[M-1];
    for (int i = M-2; i >= 0; i--)
    {
@@ -171,7 +171,7 @@ apply_PhiAdjointInv(double dt, double dx, double nu, int M, double *u, double *l
    double *f;
    vec_create(M, &f);
    vec_copy(M, u, f);
-   double b = g(dt,dx)-b(dt, dx, nu);
+   double b = b(dt, dx, nu);
    w[0]=f[0]/a[0];
    for (int i = 1; i < M; i++)
    {
