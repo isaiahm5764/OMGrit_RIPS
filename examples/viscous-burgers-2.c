@@ -293,7 +293,10 @@ my_TriSolve(braid_App       app,
    int mspace = (app->mspace);
    double nu = (app->nu);
 
+<<<<<<< HEAD
    
+=======
+>>>>>>> c6edfabcd26049b7cd4b81edafebc62d89e24f28
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    if (t < tnext)
