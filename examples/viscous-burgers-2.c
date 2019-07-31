@@ -22,24 +22,20 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-omgrit.c
+ * Example:       viscous-burgers-2
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  viscous-burgers-2
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
+ * Description:  Solves the viscous burgers equation. BTCS scheme.
+ *               "Non-linear Jacobi relaxation" with non-linearity
+ *               replaced by previous time solution.
  *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ *               Currently converges for some parameters
+ *                  
  **/
 
 #include <stdlib.h>
@@ -231,15 +227,15 @@ my_TriResidual(braid_App       app,
 
    if (uleft != NULL)
    {
-      vec_copy(mspace, (uleft->values), utmp);
+      vec_copy(mspace, (r->values), utmp);
       vec_copy(mspace, (uleft->values), u2tmp);
       vec_axpy(mspace, -1.0, u2tmp, rtmp);
-      rtmp[0] = rtmp[0]+g(dt,dx)*utmp[0]*(utmp[1]);
+      rtmp[0] = rtmp[0]+g(dt,dx)*u2tmp[0]*(u2tmp[1]);
       for(int i = 1; i <= mspace-2; i++)
       {
-        rtmp[i] = rtmp[i]+g(dt,dx)*utmp[i]*(utmp[i+1]-utmp[i-1]);
+        rtmp[i] = rtmp[i]+g(dt,dx)*u2tmp[i]*(u2tmp[i+1]-u2tmp[i-1]);
       }
-      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*utmp[mspace-2]*(utmp[mspace-3]);
+      rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
    }
 
 
@@ -250,6 +246,7 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace,-1.0,utmp,rtmp);
 
    } 
+
 
    /* Subtract rhs f */
    if (f != NULL)

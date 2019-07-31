@@ -162,6 +162,22 @@ viscous-burgers-2: viscous-burgers-2.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
 
+viscous-burgers-2_1: viscous-burgers-2_1.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
+
+viscous-burgers-2_2: viscous-burgers-2_2.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
+viscous-burgers-3: viscous-burgers-3.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
+viscous-burgers-4: viscous-burgers-4.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
 advec-imp-step-seq: advec-imp-step-seq.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	

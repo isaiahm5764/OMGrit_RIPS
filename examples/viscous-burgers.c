@@ -21,25 +21,19 @@
  *
  ***********************************************************************EHEADER*/
 
- /**
- * Example:       advec-diff-omgrit.c
+/**
+ * Example:       viscous-burgers
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  viscous-burgers
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
- *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ * Description:  Solves the viscous burgers equation. BTCS scheme.
+ *               "Non-linear Jacobi relaxation" with full non-linearity
+ *               
+ *                  
  **/
 
 #include <stdlib.h>
