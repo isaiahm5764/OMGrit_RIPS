@@ -42,9 +42,9 @@ for n in ntime:
     count+=1
 
 mpl.figure(1)
-mpl.plot(ntime, ex_2_gs, '-k')
-mpl.plot(ntime, ex_2_gj, '-g')
-mpl.plot(ntime, ex_2_omgrit, '-b')
+mpl.plot(ntime, ex_2_gs, '-o')
+mpl.plot(ntime, ex_2_gj, '-+')
+mpl.plot(ntime, ex_2_omgrit, '-k')
 mpl.xlabel('Number of iterations')
 mpl.ylabel('Run Time (s)')
 mpl.title('Run times for Linear Advection Diffusion Problem')
