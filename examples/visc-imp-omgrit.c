@@ -251,12 +251,14 @@ apply_B(double dt, int mspace, double nu, double *u, double *uleft){
 
 void 
 find_gamma(double *u, int mspace){
-  u[0] = u[1]*u[2];
+  double *tmp;
+  vec_create(mspace, &tmp);
+  u[0] = tmp[0]*tmp[1];
   for(int i=1; i<mspace-1; i++)
   {
-    u[i] = u[i]*u[i+1] - u[i]*u[i-1];
+    u[i] = tmp[i]*tmp[i+1] - tmp[i]*tmp[i-1];
   }
-  u[mspace-1] = -u[mspace-2] * u[mspace-3];
+  u[mspace-1] = -tmp[mspace-1] * tmp[mspace-2];
 }
 
 /*------------------------------------*/

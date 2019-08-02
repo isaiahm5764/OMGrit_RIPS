@@ -596,7 +596,7 @@ main(int argc, char *argv[])
    maxiter        = 20;
    cfactor        = 2;
    tol            = 1.0e-6;
-   access_level   = 2;
+   access_level   = 1;
    print_level    = 2;
 
    /* Parse command line */
