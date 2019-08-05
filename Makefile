@@ -26,162 +26,29 @@
 # Import machine specific compilers, options, flags, etc.. 
 ##################################################################
 
-BRAID_DIR=../braid
-include ../makefile.inc
+.PHONY: all braid clean
 
-##################################################################
-# Build exmaples 
-##################################################################
+all: braid examples
 
-HYPRE_DIR = ../../hypre/src/hypre
-HYPRE_FLAGS = -I$(HYPRE_DIR)/include
-HYPRE_LIB = -L$(HYPRE_DIR)/lib -lHYPRE
-HYPRE_LIB_FILE = $(HYPRE_DIR)/lib/libHYPRE.a
+braid: 
+	cd braid; $(MAKE)
 
-MFEM_DIR = ../../mfem
-MFEM_CONFIG_MK = $(MFEM_DIR)/config/config.mk
-MFEM_LIB_FILE = mfem_is_not_built
--include $(MFEM_CONFIG_MK)
+examples: ./braid/libbraid.a
+	cd examples; $(MAKE)
 
-BRAID_FLAGS = -I$(BRAID_DIR)
-BRAID_LIB_FILE = $(BRAID_DIR)/libbraid.a
+drivers: ./braid/libbraid.a
+	cd drivers; $(MAKE)
 
-C_NOHYPRE = ex-01 ex-01-adjoint ex-01-optimization ex-01-refinement ex-01-expanded ex-01-expanded-bdf2 ex-02 ex-04 ex-04-serial ex-04-omgrit
-CPP_NOHYPRE = ex-01-pp 
-F_NOHYPRE = ex-01-expanded-f
-C_EXAMPLES = ex-03 ex-03-serial
-# Note: .cpp examples will be linked with mfem
-#CXX_EXAMPLES = ex-04
+clean:
+	cd examples; $(MAKE) clean
+	cd drivers; $(MAKE) clean
+	cd braid; $(MAKE) clean
 
-.PHONY: all clean cleanout
-
-.SUFFIXES:
-.SUFFIXES: .c .cpp
-
-# put this rule first so it becomes the default
-all: $(C_NOHYPRE) $(CPP_NOHYPRE) $(C_EXAMPLES) $(CXX_EXAMPLES)
-
-# Rule for building ex-01
-ex-01: ex-01.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-adjoint
-ex-01-adjoint: ex-01-adjoint.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-optimization
-ex-01-optimization: ex-01-optimization.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-
-# Rule for building ex-01-refinement
-ex-01-refinement: ex-01-refinement.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-expanded
-ex-01-expanded: ex-01-expanded.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-pp
-ex-01-pp: ex-01-pp.cpp $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICXX) $(CXXFLAGS) $(BRAID_FLAGS) $(@).cpp -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-expanded-f
-ex-01-expanded-f: ex-01-expanded-f.f90 $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPIF90) $(FORTFLAGS) -Wno-unused-dummy-argument -Wno-uninitialized $(@).f90 -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-01-expanded-bdf2
-ex-01-expanded-bdf2: ex-01-expanded-bdf2.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-02
-ex-02: ex-02.c $(BRAID_LIB_FILE) ex-02-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-02-serial
-ex-02-serial: ex-02-serial.c $(BRAID_LIB_FILE) ex-02-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-03
-ex-03: ex-03.c $(BRAID_LIB_FILE) $(HYPRE_LIB_FILE) ex-03-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(HYPRE_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(HYPRE_LIB) $(LFLAGS)
-
-
-# Rule for building ex-03-serial
-ex-03-serial: ex-03-serial.c $(BRAID_LIB_FILE) $(HYPRE_LIB_FILE) ex-03-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(HYPRE_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(HYPRE_LIB) $(LFLAGS)
-
-# Rule for building ex-04
-ex-04: ex-04.c $(BRAID_LIB_FILE) ex-04-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-04-serial
-ex-04-serial: ex-04-serial.c $(BRAID_LIB_FILE) ex-04-lib.c
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Rule for building ex-04-omgrit
-ex-04-omgrit: ex-04-omgrit.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-advec-diff-omgrid: advec-diff-omgrid.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-advec-diff-imp: advec-diff-imp.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-visc-berg-seq: visc-berg-seq.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-
-block_gs: block_gs.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
-
-advec-diff-imp-full-res: advec-diff-imp-full-res.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)		
-	
-# Rule for compiling .c files
-%: %.c $(BRAID_LIB_FILE)
-	@echo "Building" $@ "..."
-	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(HYPRE_FLAGS) $(@).c -o $@\
- $(BRAID_LIB_FILE) $(HYPRE_LIB) $(LFLAGS)
-
-# Rule for compiling .cpp files; links with mfem
-%: %.cpp $(BRAID_LIB_FILE) $(MFEM_LIB_FILE) $(MFEM_CONFIG_MK)
-	@echo "Building" $@ "..."
-	$(MPICXX) $(CXXFLAGS) $(BRAID_FLAGS) $(MFEM_FLAGS) \
-	$< -o $@ $(MFEM_LIBS) $(BRAID_LIB_FILE) $(LFLAGS)
-
-# Generate an error message if the MFEM library is not built and exit
-$(MFEM_LIB_FILE):
-	$(error The MFEM library is not built)
-
-# Generate an error message if the Hypre library is not built and exit
-$(HYPRE_LIB_FILE):
-	$(error The Hypre library is not built, unable to build ex-03)
-
-clean: cleanout
-	rm -f *.o $(C_NOHYPRE) $(CPP_NOHYPRE) $(F_NOHYPRE) $(C_EXAMPLES) $(CXX_EXAMPLES) $(F_EXAMPLES) *ror_norm* *_err_* *_mesh* *_sol_*
-	rm -rf *.dSYM
-
-cleanout:
-	rm -f ex*.out.*
-
+info:
+	@echo "MPICC     = `which $(MPICC)`"
+	@echo "MPICXX    = `which $(MPICXX)`"
+	@echo "MPIF90    = `which $(MPIF90)`"
+	@echo "CFLAGS    = $(CFLAGS)"
+	@echo "CXXFLAGS  = $(CXXFLAGS)"
+	@echo "FORTFLAGS = $(FORTFLAGS)"
+	@echo "LFLAGS    = $(LFLAGS)"

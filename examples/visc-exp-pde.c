@@ -182,16 +182,18 @@ my_TriResidual(braid_App       app,
     *  However this part is linear as the "non-linearity" depends on 
     *  the previous time solution, dealt with below in "West Block"  
     */
-
+   double *tmp;
+   vec_create(mspace, &tmp);
 
    vec_copy(mspace, (r->values), utmp);
+   vec_copy(mspace, (r->values), tmp);
    double A = (nu*dt / (dx*dx));
    double B = 1 - 2*nu*dt/(dx*dx);
 
-   utmp[0] = B*u[0] + A*u[1];
+   utmp[0] = B*tmp[0] + A*tmp[1];
    for(int i=1; i<mspace; i++)
    {
-      utmp[i] = B*u[i] + A*u[i+1] + A*u[i-1];
+      utmp[i] = B*tmp[i] + A*tmp[i+1] + A*tmp[i-1];
    }
 
 

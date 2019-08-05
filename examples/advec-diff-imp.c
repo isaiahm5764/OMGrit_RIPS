@@ -22,13 +22,13 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-omgrit.c
+ * Example:       advec-diff-imp.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make ex-04-adjoint
+ * Compile with:  make advec-diff-imp
  *
  * Description:  Solves a simple optimal control problem in time-parallel:
  * 
@@ -38,8 +38,7 @@
  *                        u(0,t)=u(1,t)=0
  *                                  u(x,0)=u0(x)
  *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
+ *                 
  **/
 
 #include <stdlib.h>
@@ -138,8 +137,8 @@ vec_scale(int size, double alpha, double *x)
  * KKT component routines
  *--------------------------------------------------------------------------*/
 
-/* This is the K=[A B C] matrix. It acts on a vector in R^M */
-/* This function requies that M>=3, but this can easily be fixed later */
+/* This is the application of A inverse*/
+
 void
 apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
 {   
@@ -164,7 +163,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    }
 }
 
-/*------------------------------------*/
+/*This is the application of A inverse transpose*/
 
 void
 apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, double *a)

@@ -42,12 +42,12 @@ for n in ntime:
     count+=1
 
 mpl.figure(1)
-mpl.plot(ntime, ex_04_gs, '-k')
-mpl.plot(ntime, ex_04_gj, '-g')
-mpl.plot(ntime, ex_04_omgrit, '-b')
+mpl.plot(ntime, ex_04_gs, '-o')
+mpl.plot(ntime, ex_04_gj, '-+')
+mpl.plot(ntime, ex_04_omgrit, '-k')
 mpl.xlabel('Number of iterations')
 mpl.ylabel('Run Time (s)')
 mpl.title('Run times for Linear Quadratic Optimal Control Problem')
-mpl.legend(['Block Gauss Seidel', 'Block Gauss Jacobi',"OMGrit"])
+mpl.legend(['Block Gauss Seidel', 'Block Jacobi',"OMGrit"])
 
 mpl.show()

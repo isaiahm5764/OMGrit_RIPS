@@ -45,7 +45,7 @@ for line in lines:
 
 mpl.figure(1)
 mpl.plot(tmesh[1:], state_vec[:,0], '-b')
-mpl.plot(tmesh[1:], state_vec[:,1], '-k')
+mpl.plot(tmesh[1:], state_vec[:,1], '--')
 mpl.xlabel('time')
 mpl.title('State Solution Values')
 mpl.legend(['$u_{1}$', '$u_{2}$'])

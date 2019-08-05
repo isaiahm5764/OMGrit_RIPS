@@ -237,7 +237,8 @@ my_TriResidual(braid_App       app,
       }
       rtmp[mspace-1] = rtmp[mspace-1]+g(dt,dx)*u2tmp[mspace-1]*(-u2tmp[mspace-2]);
    }
-   else{
+   else if (uleft == NULL)
+   {
       vec_copy(mspace, (r->values), utmp);
       rtmp[0] = rtmp[0]+g(dt,dx)*u0[0]*(u0[1]);
       for(int i = 1; i <= mspace-2; i++)
@@ -248,7 +249,7 @@ my_TriResidual(braid_App       app,
    }
 
 
-   /* Deals with initial condition, only affceting first equation */
+   /* Deals with initial condition, only affecting first equation */
    if ((!homogeneous) && (index == 0))
    {
       vec_copy(mspace, u0, utmp);
@@ -292,6 +293,10 @@ my_TriSolve(braid_App       app,
    int mspace = (app->mspace);
    double nu = (app->nu);
 
+<<<<<<< HEAD
+   
+=======
+>>>>>>> c6edfabcd26049b7cd4b81edafebc62d89e24f28
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    if (t < tnext)
