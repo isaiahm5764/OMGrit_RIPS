@@ -238,9 +238,22 @@ visc-imp-omgrit: visc-imp-omgrit.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
+<<<<<<< HEAD
 advec-diff-viscous-GS-v2: advec-diff-viscous-GS-v2.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)	
+=======
+visc-imp-omgrit-new: visc-imp-omgrit-new.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+visc-exp-pde: visc-exp-pde.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+
+advec-diff-full-sys: advec-diff-full-sys.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+>>>>>>> 487f08b3271dcade9f47e77a4db9b3081b61666e
 
 # Rule for compiling .c files
 %: %.c $(BRAID_LIB_FILE)

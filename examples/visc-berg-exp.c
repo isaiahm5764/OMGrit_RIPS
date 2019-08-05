@@ -251,12 +251,14 @@ apply_B(double dt, int mspace, double nu, double *u, double *uleft){
 
 void 
 find_gamma(double *u, int mspace){
-  u[0] = -u[1]*u[1];
+  double *tmp;
+  vec_create(mspace, &tmp);
+  u[0] = -tmp[1]*tmp[1];
   for(int i=1; i<mspace-1; i++)
   {
-    u[i] = u[i-1]*u[i-1] - u[i+1]*u[i+1];
+    u[i] = tmp[i-1]*tmp[i-1] - tmp[i+1]*tmp[i+1];
   }
-  u[mspace-1] = u[mspace-2] * u[mspace-2];
+  u[mspace-1] = tmp[mspace-2] * tmp[mspace-2];
 }
 
 /*------------------------------------*/
@@ -288,6 +290,8 @@ my_TriResidual(braid_App       app,
    braid_TriStatusGetLevel(status, &level);
    braid_TriStatusGetTIndex(status, &index);
 
+   
+
    /* Get the time-step size */
    if (t < tnext)
    {
@@ -302,6 +306,8 @@ my_TriResidual(braid_App       app,
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
 
+   double th = alpha*dx/dt;
+
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
    vec_create(mspace, &utmp);
@@ -309,124 +315,106 @@ my_TriResidual(braid_App       app,
 
    /* CENTER BLOCK */
 
-   if(uleft == NULL){
+   //1
+   vec_axpy(mspace, dx*dt ,r->values, rtmp);
+
+   //2
+   if(uleft==NULL){
     vec_copy(mspace, r->values, utmp);
+    vec_scale(mspace, th, utmp);
     vec_axpy(mspace, 1.0, utmp, rtmp);
-    vec_axpy(mspace, dx*dt, utmp, rtmp);
-    apply_B(dt, mspace, nu, utmp, u0);
-    vec_scale(mspace, alpha*g(dt,dx)*dx/dt, utmp);
-    vec_axpy(mspace, -1.0, utmp, rtmp);
+
+    vec_copy(mspace, uright->values, utmp);
+    apply_PhiAdjoint(dt, mspace, nu, utmp);
+    vec_axpy(mspace, -th, utmp, rtmp);
+   }
+   else if(uright==NULL){
+    vec_copy(mspace, uleft->values, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, -th, utmp, rtmp);
+
+    vec_copy(mspace, r->values, utmp);
+    vec_axpy(mspace, th, utmp, rtmp);
+
+    apply_PhiAdjoint(dt, mspace, nu, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, th, utmp, rtmp);
+
+   }
+   else{
+    vec_copy(mspace, uleft->values, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, -th, utmp, rtmp);
+
+    vec_copy(mspace, r->values, utmp);
+    vec_axpy(mspace, th, utmp, rtmp);
+
+    apply_PhiAdjoint(dt, mspace, nu, utmp);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, th, utmp, rtmp);
+
+    vec_copy(mspace, uright->values, utmp);
+    apply_PhiAdjoint(dt, mspace, nu, utmp);
+    vec_axpy(mspace, -th, utmp, rtmp);
+   }
+
+   //3
+   if(uleft==NULL){
+    vec_copy(mspace, r->values, utmp);
+    apply_B(dt, mspace, nu, utmp, utmp);
+    vec_axpy(mspace, -th*g(dt, dx), utmp, rtmp);
    }
    else{
     vec_copy(mspace, r->values, utmp);
-    apply_PhiAdjoint(dt, mspace, nu, utmp);
-    apply_Phi(dt, mspace, nu, utmp);
-    vec_scale(mspace, alpha*dx/(dt), utmp);
-    vec_axpy(mspace, 1.0, utmp, rtmp);
-
-    vec_copy(mspace, r->values, utmp);
-    vec_axpy(mspace, alpha*dx/(dt), utmp, rtmp);
-
-    vec_copy(mspace, r->values, utmp);
-    vec_axpy(mspace, dx*dt, utmp, rtmp);
-
-    vec_copy(mspace, r->values, utmp);
-    apply_B(dt, mspace, nu, utmp, uleft->values);
-    vec_scale(mspace, alpha*g(dt,dx)*dx/dt, utmp);
-    vec_axpy(mspace, -1.0, utmp, rtmp);
-   }
-
-   //
-
-
-
-
-   /* WEST BLOCK */
-
-   if(uleft != NULL)
-   {
-    vec_copy(mspace, uleft->values, utmp);
-    apply_Phi(dt, mspace, nu, utmp);
-    vec_axpy(mspace, alpha*dx/dt, utmp, rtmp);
+    apply_B(dt, mspace, nu, utmp, utmp);
+    vec_axpy(mspace, -th*g(dt, dx), utmp, rtmp);
 
     vec_copy(mspace, uleft->values, utmp);
+    apply_B(dt, mspace, nu, utmp, r->values);
     apply_Phi(dt, mspace, nu, utmp);
-    apply_B(dt, mspace, nu, utmp, uleft->values);
-    vec_axpy(mspace, -alpha*dx*g(dt,dx)/(dt), utmp, rtmp);
+    vec_axpy(mspace, th*g(dt, dx), utmp, rtmp);
    }
 
+   //4
+   if(uleft==NULL){
+    vec_copy(mspace, r->values, utmp);
+    find_gamma(utmp, mspace);
+    vec_axpy(mspace, -th*g(dt,dx), utmp, rtmp);
+   }
+   else{
+    vec_copy(mspace, r->values, utmp);
+    find_gamma(utmp, mspace);
+    vec_axpy(mspace, -th*g(dt,dx), utmp, rtmp);
 
-  /* EAST BLOCK */
-   if(uright!=NULL){
-   vec_copy(mspace, uright->values, utmp);
-   apply_PhiAdjoint(dt, mspace, nu, utmp);
-   vec_scale(mspace, alpha*dx/(dt), utmp);
-   vec_axpy(mspace, -1.0, utmp, rtmp);
- }
+    vec_copy(mspace, uleft->values, utmp);
+    find_gamma(utmp, mspace);
+    apply_Phi(dt, mspace, nu, utmp);
+    vec_axpy(mspace, th*g(dt,dx), utmp, rtmp);
+   }
 
-   
-   //calculate f and subtract to find residual
-   if ((!homogeneous))
+   //5
+   vec_copy(mspace, r->values, utmp);
+   find_gamma(utmp, mspace);
+   apply_B(dt, mspace, nu, utmp, utmp);
+   vec_axpy(mspace, g(dt,dx)*g(dt,dx)*th, utmp, rtmp);
+
+   //7
+   vec_axpy(mspace, -dx*dt, u0, rtmp);
+
+    if ((!homogeneous))
    {
+    if(uleft==NULL){
       vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, -dx*dt, u0, rtmp);
+      apply_Phi(dt, mspace, nu, utmp);
+      apply_B(dt, mspace, nu, utmp, utmp);
+      vec_axpy(mspace, th*g(dt,dx), utmp, rtmp);
 
-      vec_create(mspace, &utmp);
-      if(uleft==NULL){
-        vec_copy(mspace, u0, u2tmp);
-        apply_Phi(dt, mspace, nu, u2tmp);
-        vec_axpy(mspace, 1.0, u2tmp, utmp);
+      vec_copy(mspace, u0, utmp);
+      apply_Phi(dt, mspace, nu, utmp);
+      vec_axpy(mspace, -th, utmp, rtmp);
+    }
 
-        vec_copy(mspace, r->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);
-
-        vec_copy(mspace, uright->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        apply_PhiAdjoint(dt, mspace, nu, u2tmp);
-        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
-      }else if(uright==NULL){
-        vec_copy(mspace, r->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);       
-      }else{
-        vec_copy(mspace, r->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        vec_axpy(mspace, g(dt,dx), u2tmp, utmp);
-
-        vec_copy(mspace, uright->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        apply_PhiAdjoint(dt, mspace, nu, u2tmp);
-        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
-      }
-      vec_scale(mspace, alpha*dx/(dt), utmp);
-      vec_axpy(mspace, -1.0, utmp, rtmp);
-      vec_create(mspace, &utmp);
-
-      if(uleft==NULL){
-        vec_copy(mspace, u0, u2tmp);
-        apply_Phi(dt, mspace, nu, u2tmp);
-        vec_axpy(mspace, -1.0, u2tmp, utmp);
-
-        vec_copy(mspace, r->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
-        apply_B(dt, mspace, nu, utmp, r->values);
-        vec_scale(mspace, dx*g(dt,dx)*alpha/dt, utmp);
-        vec_axpy(mspace, 1.0, utmp, rtmp);
-      }
-      else{
-        vec_copy(mspace, r->values, u2tmp);
-        find_gamma(u2tmp, mspace);
-        vec_axpy(mspace, -g(dt,dx), u2tmp, utmp);
-
-        apply_B(dt, mspace, nu, utmp, uleft->values);
-        vec_scale(mspace, dx*g(dt,dx)*alpha/dt, utmp);
-        vec_axpy(mspace, 1.0, utmp, rtmp);
-      }
-
-
-   } 
+   }
 
 
    /* Subtract rhs f */
@@ -495,7 +483,7 @@ my_TriSolve(braid_App       app,
 
 
    rtmp = (u->values);
-   vec_scale(mspace, -1.0*dx*dt, rtmp);
+   vec_scale(mspace, -1.0*dt*dx, rtmp);
    apply_PhiInv(dt, dx, nu, mspace, rtmp, l, a);
    apply_PhiAdjointInv(dt, dx, nu, mspace, rtmp, l, a);
    vec_scale(mspace, .5, rtmp);
@@ -508,7 +496,8 @@ my_TriSolve(braid_App       app,
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
-   
+
+   vec_destroy(utmp);
 
    return 0;
 }   
