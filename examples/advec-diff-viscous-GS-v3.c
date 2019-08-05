@@ -1,46 +1,5 @@
-/*BHEADER**********************************************************************
- * Copyright (c) 2013, Lawrence Livermore National Security, LLC. 
- * Produced at the Lawrence Livermore National Laboratory. Written by 
- * Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin 
- * Dobrev, et al. LLNL-CODE-660355. All rights reserved.
- * 
- * This file is part of XBraid. For support, post issues to the XBraid Github page.
- * 
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License (as published by the Free Software
- * Foundation) version 2.1 dated February 1999.
- * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
- * License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc., 59
- * Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
- ***********************************************************************EHEADER*/
-
- /**
- * Example:       advec-diff-omgrit.c
- *
- * Interface:     C
- * 
- * Requires:      only C-language support     
- *
- * Compile with:  make ex-04-adjoint
- *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
- *
- *               Implements a steepest-descent optimization iteration
- *               using fixed step size for design updates.   
- **/
+/*This version is the same as advec-diff-viscous-GS except 
+I have the u,v,w state variables as global*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,13 +25,15 @@ typedef struct _braid_App_struct
    int      mspace;      /* Number of space points included in our state vector */
                          /* So including boundaries we have M+2 space points */
 
-   double **U;           /* This holds the u, v, and w vectors. U is in R^3MN */
+   double **w;           /* This holds the u, v, and w vectors. U is in R^3MN */
    double *U0;
    double *ai;
    double *li;
 
-   double **u_state;      /* u,v,w_state hold the current values. They should be accessile in TriSolve*/
-   double **v_state;      /* Each of these should be of size MN */
+   double seed;          /* Random seed for all initial guesses */
+
+   double **u_state;     /* u,v,w_state hold the current values. They should be accessile in TriSolve*/
+   double **v_state;     /* Each of these should be of size MN */
    double **w_state;
 
 
@@ -243,9 +204,9 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 void add_Gamma(int mspace, double *u_n, double *v)
 {
    v[0]+=u_n[0]*u_n[1];
-   for (int i = 0; i<mspace-2;i++)
+   for (int i = 1; i<mspace-2;i++)
    {
-      v[i]+=u_n[i]*(u_n[i+1]);
+      v[i]+=u_n[i]*(u_n[i+1]-u_n[i-1]);
    }
    v[mspace-1]+=-u_n[mspace-1]*u_n[mspace-2];
 }
@@ -317,8 +278,10 @@ my_TriResidual(braid_App       app,
    int     level, index;
    int     mspace = (app->mspace);
    int     ntime = (app->ntime);
-   double **U = (app->U);
-   double *u0 = (app->U0);   
+   double *u0 = (app->U0);
+   double **w_state=(app->w_state);
+   double **u_state=(app->u_state);
+   double **v_state=(app->v_state);
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -338,13 +301,12 @@ my_TriResidual(braid_App       app,
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
 
-   dx = 1/((double)(mspace+1));
-
    /*Set the g=gamma term*/
    g=g(dt, dx);
 
+   /*printf("1a.r\n");*/
    /***************UPDATE U VARIABLE***************/
-   if(index < ntime)
+   if(index < (ntime-1)/3)
    {
       /*Create the vectors needed for U computation*/
       vec_create(mspace, &rtmp);
@@ -352,14 +314,18 @@ my_TriResidual(braid_App       app,
       vec_create(mspace, &wtmp);
       vec_create(mspace, &wtmp_right);
       vec_create(mspace, &utmp);
+      /*printf("2a.r\n");*/
 
       /*Copy the current values into wtmp, wtmp_right, and copy u into uold*/
       vec_copy(mspace, (r->values), uold);
-      vec_copy(mspace, U[index+2*ntime], wtmp);
-      vec_copy(mspace, U[index+2*ntime+1], wtmp_right);
+      /*printf("1b.r\n");*/
+      vec_copy(mspace, w_state[index], wtmp);
+      /*printf("2b.r\n");*/
 
-      if(index == ntime - 1)
+      if(index == ((ntime-1)/3) - 1)
       {
+         /*printf("1c.r\n");*/
+
          /*Compute effect of the L^Tw term*/
          vec_copy(mspace, wtmp, rtmp);
          apply_Aadjoint(dt, dx, nu, mspace, rtmp);
@@ -369,28 +335,39 @@ my_TriResidual(braid_App       app,
          vec_scale(mspace, dt*dx, utmp);
 
          vec_axpy(mspace, 1.0, utmp, rtmp);
+         /*printf("2c.r\n");*/
 
          /*Compute the effect of the gamma term*/
+         /*printf("1d.r\n");*/
          rtmp[0]=rtmp[0]-(wtmp[0]-wtmp[1])*uold[1]*g/(dx*dt);
          for(int i = 1; i<mspace-2; i++)
          {
             rtmp[i]=rtmp[i]-(uold[i-1]*wtmp[i-1]+(uold[i+1]-uold[i-1])*wtmp[i]-uold[i+1]*wtmp[i+1])*g/(dx*dt);
          }
          rtmp[mspace-1]=rtmp[mspace-1]-(wtmp[mspace-2]-wtmp[mspace-1])*uold[mspace-2]*g/(dx*dt);
+         /*printf("2d.r\n");*/
       }
       else
        {
+         /*printf("1e.r\n");*/
+         /* Copy the w_right vector if we are not at the end of the u state vector*/
+         vec_copy(mspace, w_state[index+1], wtmp_right);
+
          /*Compute effect of the L^Tw term*/
          vec_copy(mspace, wtmp, rtmp);
          apply_Aadjoint(dt, dx, nu, mspace, rtmp);
          vec_axpy(mspace, -1.0, wtmp_right, rtmp);
+         /*printf("2e.r\n");*/
 
+         /*printf("1f.r\n");*/
          vec_copy(mspace, (r->values), utmp);
          vec_axpy(mspace, -1.0, u0, utmp);
          vec_scale(mspace, dt*dx, utmp);
+         /*printf("2f.r\n");*/
 
          vec_axpy(mspace, 1.0, utmp, rtmp);
 
+         /*printf("1g.r\n");*/
          /*Compute the effect of the gamma term*/
          rtmp[0]=rtmp[0]-(wtmp[0]-wtmp[1])*uold[1]*g/(dx*dt);
          for(int i = 1; i<mspace-2; i++)
@@ -399,7 +376,9 @@ my_TriResidual(braid_App       app,
          }
          rtmp[mspace-1]=rtmp[mspace-1]-(wtmp[mspace-2]-wtmp[mspace-1])*uold[mspace-2]*g/(dx*dt);
       }
+
       vec_copy(mspace, rtmp, (r->values)); 
+      /*printf("2g.r\n");*/
       vec_destroy(rtmp);
       vec_destroy(utmp);
       vec_destroy(wtmp_right);
@@ -408,54 +387,61 @@ my_TriResidual(braid_App       app,
    }
 
    /***************SOLVE GRAD V EQUATION***************/
-   
-   if(index>=ntime && index<2*ntime)
+   /*printf("1h.r\n");*/
+   if((ntime-1)/3<=index && index<2*(ntime-1)/3)
    {
       vec_create(mspace, &rtmp);
       vec_scale(mspace, alpha*dx, rtmp);
-      vec_axpy(mspace, -1.0, U[index+ntime], rtmp);
+      vec_axpy(mspace, -1.0, w_state[index-((ntime-1)/3)], rtmp);
       vec_scale(mspace, dt, rtmp);
       
       vec_copy(mspace, rtmp, (r->values));
       vec_destroy(rtmp);
    }
+   /*printf("2h.r\n");*/
 
    /***************SOLVE GRAD W EQUATION***************/
 
-   else
+   if(index>=2*(ntime-1)/3)
    {
       vec_create(mspace, &rtmp);
       vec_create(mspace, &vtmp);
       vec_create(mspace, &utmp);
 
-      if(index == 2*ntime)
+
+      
+      if(index == 2*(ntime-1)/3)
       {
-         vec_copy(mspace, U[0], utmp);
-         vec_copy(mspace, U[0], rtmp);
+         /*printf("1i.r\n");*/
+         vec_copy(mspace, u_state[0], utmp);
+         vec_copy(mspace, u_state[0], rtmp);
          apply_A(dt, dx, nu, mspace, rtmp);
 
-         add_Gamma(mspace, U[0], rtmp);
+         add_Gamma(mspace, u_state[0], rtmp);
 
          vec_axpy(mspace, -1.0, u0, rtmp);
-         vec_copy(mspace, U[ntime-index], vtmp);
+         vec_copy(mspace, v_state[index-(2*(ntime-1)/3)], vtmp);
          vec_scale(mspace, -1.0*dt, vtmp);
          vec_axpy(mspace, 1.0, vtmp, rtmp);
+         /*printf("2i.r\n");*/
       }
       else
       {
-         vec_copy(mspace, U[index], rtmp);
+         /*printf("1j.r\n");*/
+         vec_copy(mspace, u_state[index-(2*(ntime-1)/3)], rtmp);
          apply_A(dt, dx, nu, mspace, rtmp);
-         vec_copy(mspace, U[index-1], utmp);
+         vec_copy(mspace, u_state[index-(2*(ntime-1)/3)-1], utmp);
          vec_axpy(mspace, -1.0, utmp, rtmp);
 
-         vec_copy(mspace, U[index], utmp);
+         vec_copy(mspace, u_state[index-(2*(ntime-1)/3)], utmp);
 
-         add_Gamma(mspace, U[0], rtmp);
+         add_Gamma(mspace, u_state[0], rtmp);
 
          vec_axpy(mspace, -1.0, u0, rtmp);
-         vec_copy(mspace, U[ntime-index], vtmp);
+         vec_copy(mspace, v_state[index-(2*(ntime-1)/3)], vtmp);
          vec_scale(mspace, -1.0*dt, vtmp);
          vec_axpy(mspace, 1.0, vtmp, rtmp);
+         /*printf("2j.r\n");*/
       }
       vec_copy(mspace, rtmp, (r->values));
       vec_destroy(rtmp);
@@ -485,8 +471,10 @@ my_TriSolve(braid_App       app,
    int ntime = (app->ntime);
    double alpha = (app->alpha);
    double nu = (app->nu);
-   double **U = (app->U);
    double *u0 = (app->U0);
+   double **w_state=(app->w_state);
+   double **u_state=(app->u_state);
+   double **v_state=(app->v_state);
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -507,49 +495,40 @@ my_TriSolve(braid_App       app,
    /*Set the g=gamma term*/
    g=g(dt, dx);
 
+
+  /*printf("\n\n");
+   printf("The index is: ");
+   printf("%d\n",index);
+   printf("(ntime-1)/3 is: ");
+   printf("%d\n",(ntime-1)/3);
+
    /***************UPDATE U VARIABLE***************/
-   if(index < ntime)
+   if(index < (ntime-1)/3)
    {
       /*Create the vectors needed for U computation*/
-      
+
+      /*printf("Solving for U\n");
+      printf("\n");
+      printf("\n");
       printf("here 1a\n");
-      
+      */
       vec_create(mspace, &utmp);
       vec_create(mspace, &uold);
       vec_create(mspace, &wtmp);
       vec_create(mspace, &wtmp_right);
 
       /*Copy the current values into wtmp, wtmp_right, and copy u into uold*/
-      vec_copy(mspace, (u->values), uold);
+      vec_copy(mspace, (u->values), uold);     
+      /*printf("here 2a\n");*/
+      vec_copy(mspace, w_state[index], wtmp);
       
-
-         /*if (1==1)
-         {
-            printf("%f\n", u0[i]);
-         }
-         else
-         {
-            printf("Not null\n");
-         }*/
-         /*vec_copy(mspace, U[1][1], utmp);*/
-         printf("here 2a.1\n");
-         /*printf("%f\n", U[0][0]);*/
-         double t=U[0][0];
-         printf("here 2a.2\n");
-      
-
-
-      vec_copy(mspace, U[index+(2*ntime)], wtmp);
-      
-      vec_copy(mspace, U[index+(2*ntime)+1], wtmp_right);
-      printf("here 2a.3\n");
 
       
 
-      if((int)index == ntime - 1)
+      if(index == ((ntime-1)/3) - 1)
       {
          /*Compute effect of the L^Tw term*/
-         printf("here 1b\n");
+         /*printf("here 1b\n");*/
          vec_copy(mspace, wtmp, utmp);
          apply_Aadjoint(dt, dx, nu, mspace, utmp);
          vec_scale(mspace, -1.0/(dx*dt), utmp);
@@ -561,12 +540,15 @@ my_TriSolve(braid_App       app,
             utmp[i]=utmp[i]-(utmp[i-1]*wtmp[i-1]+(uold[i+1]-utmp[i-1])*wtmp[i]-uold[i+1]*wtmp[i+1])*g/(dx*dt);
          }
          utmp[mspace-1]=utmp[mspace-1]-(wtmp[mspace-2]-wtmp[mspace-1])*utmp[mspace-2]*g/(dx*dt);
-         printf("here 2b\n");
+         /*printf("here 2b\n");*/
       }
       else
       {
+         /* Copy the w_right vector if we are not at the end of the u state vector*/
+         vec_copy(mspace, w_state[index+1], wtmp_right);
+
          /*Compute effect of the L^Tw term*/
-         printf("here 1c\n");
+         /*printf("here 1c\n");*/
          vec_copy(mspace, wtmp, utmp);
          apply_Aadjoint(dt, dx, nu, mspace, utmp);
          vec_axpy(mspace, 1.0, wtmp_right, utmp);
@@ -579,64 +561,81 @@ my_TriSolve(braid_App       app,
             utmp[i]=utmp[i]-(utmp[i-1]*wtmp[i-1]+(uold[i+1]-utmp[i-1])*wtmp[i]-uold[i+1]*wtmp[i+1])*g/(dx*dt);
          }
          utmp[mspace-1]=utmp[mspace-1]-(wtmp[mspace-2]-wtmp[mspace-1])*utmp[mspace-2]*g/(dx*dt);
-         printf("here 2c\n");
+         /*printf("here 2c\n");*/
       }
-      printf("here 1d\n");
+      /*printf("here 1d\n");*/
       vec_copy(mspace, utmp, (u->values)); 
+      vec_copy(mspace, utmp, u_state[index]); 
       vec_destroy(utmp);
       vec_destroy(wtmp_right);
       vec_destroy(wtmp);
       vec_destroy(uold);     
-      printf("here 2d\n");
+      /*printf("here 2d\n");*/
+
+      /*printf("%f\n", u_state[index][0]);*/
    }
    /***************UPDATE V VARIABLE***************/
 
-   if(index>=ntime && index<2*ntime)
+   if((ntime-1)/3<=index && index<2*(ntime-1)/3)
    {
+      /*printf("Solving for V\n");
+      printf("\n");
+      printf("\n");      
+      */
       vec_create(mspace, &vtmp);
 
-
-      if(index == ntime)
+      if(index == (ntime-1)/3)
       {
-         printf("here 1e\n");
-         vec_copy(mspace, U[0], vtmp);
+         /*printf("here 1e\n");*/
+         vec_copy(mspace, u_state[0], vtmp);
+
          apply_A(dt, dx, nu, mspace, vtmp);
          vec_scale(mspace, 1.0/dt, vtmp);
          vec_axpy(mspace, 1.0, u0, vtmp);
-         add_Gamma(mspace, U[0], vtmp);
-         printf("here 2e\n");
+
+         
+         
+         add_Gamma(mspace, u_state[0], vtmp);
+
+         
+         /*printf("here 2e\n");*/
       }
       else
       {
-         printf("here 1f\n");
-         vec_copy(mspace, U[index], vtmp);
+         /*printf("here 1f\n");*/
+
+         vec_copy(mspace, u_state[index-(ntime-1)/3], vtmp);
          apply_A(dt, dx, nu, mspace, vtmp);
-         vec_axpy(mspace, -1.0, U[index-1], vtmp);
+         vec_axpy(mspace, -1.0, u_state[index-(ntime-1)/3-1], vtmp);
          vec_scale(mspace, 1.0/dt, vtmp);
-         add_Gamma(mspace, U[index], vtmp);
-         printf("here 2f\n");
+         add_Gamma(mspace, u_state[index-(ntime-1)/3], vtmp);
+         
+         /*printf("here 2f\n");*/
       }
       vec_copy(mspace, vtmp, (u->values));
+      vec_copy(mspace, vtmp, v_state[index-(ntime-1)/3]);     
       vec_destroy(vtmp);
    }
 
    /***************UPDATE W VARIABLE***************/
    
-   else
+   if(index>=2*(ntime-1)/3)
    {
-      printf("here 1g\n");
+      /*printf("Solving for W\n");
+      printf("\n");
+      printf("\n");      
+      printf("here 1g\n");*/
       vec_create(mspace, &wtmp);
-      vec_copy(mspace, U[index+ntime], wtmp);
+      vec_copy(mspace, v_state[index-2*(ntime-1)/3], wtmp);
       vec_scale(mspace, alpha*dx, wtmp);
       vec_copy(mspace, wtmp, (u->values));
+      vec_copy(mspace, wtmp, w_state[index-2*(ntime-1)/3]);
       vec_destroy(wtmp);
-      printf("here 2g\n");
    }
 
    /***********************************************/
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
-
    return 0;
 }   
 
@@ -657,6 +656,7 @@ my_Init(braid_App     app,
         double        t,
         braid_Vector *u_ptr)
 {
+   double seed = (app->seed);
    my_Vector *u;
    int mspace = (app->mspace);
 
@@ -664,10 +664,18 @@ my_Init(braid_App     app,
    u = (my_Vector *) malloc(sizeof(my_Vector));
    vec_create(mspace, &(u->values));
 
-   for (int i = 0; i <= mspace-1; i++)
+   /*for (int i = 0; i <= mspace-1; i++)
    {
       u->values[i] = ((double)braid_Rand())/braid_RAND_MAX;
-   }
+   }*/
+
+   srand(seed);
+   for(int i=0; i<mspace; i++)
+   {   
+      double random_value;
+      random_value=(double)rand()/RAND_MAX*2.0-1.0; 
+      u->values[i]=random_value;         
+   }   
 
    *u_ptr = u;
 
@@ -766,21 +774,21 @@ my_Access(braid_App          app,
    if (done)
    {
       /* Allocate w array in app (ZTODO: This only works on one proc right now) */
-      if ((app->U) == NULL)
+      if ((app->w) == NULL)
       {
          int  ntpoints;
          braid_AccessStatusGetNTPoints(astatus, &ntpoints);
          ntpoints++;  /* ntpoints is really the gupper index */
-         (app->U) = (double **) calloc(ntpoints, sizeof(double *));
+         (app->w) = (double **) calloc(ntpoints, sizeof(double *));
       }
 
       braid_AccessStatusGetTIndex(astatus, &index);
-      if (app->U[index] != NULL)
+      if (app->w[index] != NULL)
       {
-         free(app->U[index]);
+         free(app->w[index]);
       }
-      vec_create(mspace, &(app->U[index]));
-      vec_copy(mspace, (u->values), (app->U[index]));
+      vec_create(mspace, &(app->w[index]));
+      vec_copy(mspace, (u->values), (app->w[index]));
    }
    return 0;
 }
@@ -855,18 +863,18 @@ main(int argc, char *argv[])
    braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt; 
+   double      tstart, tstop, dt, seed; 
    int         rank, ntime, mspace, arg_index;
    double      alpha, nu;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double      tol;
 
-   printf("here 1a.m\n");
+   /*printf("here 1a.m\n");*/
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-   printf("here 2a.m\n");
+   /*printf("here 2a.m\n");*/
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
    ntime = 256;
@@ -874,6 +882,7 @@ main(int argc, char *argv[])
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
    nu    = 2;                /* parameter in PDE */
+   seed = 1.1;
 
    /* Define some Braid parameters */
    max_levels     = 30;
@@ -912,6 +921,7 @@ main(int argc, char *argv[])
          printf("  -tol <tol>              : Stopping tolerance \n");
          printf("  -access <access_level>  : Braid access level \n");
          printf("  -print <print_level>    : Braid print level \n");
+         printf("  -seed <seed>            : Seed for initial guess \n");
          exit(1);
       }
       else if ( strcmp(argv[arg_index], "-ntime") == 0 )
@@ -964,6 +974,11 @@ main(int argc, char *argv[])
          arg_index++;
          cfactor = atoi(argv[arg_index++]);
       }
+      else if ( strcmp(argv[arg_index], "-seed") == 0 )
+      {
+         arg_index++;
+         seed = atoi(argv[arg_index++]);
+      }       
       else if ( strcmp(argv[arg_index], "-tol") == 0 )
       {
          arg_index++;
@@ -993,9 +1008,9 @@ main(int argc, char *argv[])
    /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
-   dt = (tstop-tstart)/ntime; 
+   dt = (tstop-tstart)/((ntime-1)/3); 
     
-   printf("here 1b.m\n");
+   /*printf("here 1b.m\n");*/
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
    app->myid     = rank;
@@ -1003,12 +1018,11 @@ main(int argc, char *argv[])
    app->mspace   = mspace;
    app->nu       = nu;
    app->alpha    = alpha;
-   app->U        = NULL;
-   printf("here 2b.m\n");
+   app->w        = NULL;
+   app->seed     = seed;
 
-   /* Set this to whatever u0 is. */
-
-   double *U0 = (double*) malloc( ntime*sizeof(double) );
+   /********** Set this to whatever u0 is **********/
+   double *U0 = (double*) malloc( mspace*sizeof(double) );
    for(int i=0; i<mspace/2; i++){
       U0[i]=1;
    }
@@ -1017,12 +1031,59 @@ main(int argc, char *argv[])
    {
       U0[i]=0;
    }
+   app->U0 = U0;
 
-   app->U0       = U0;
+   /********** Initialize u_state, v_state and w_state variables **********/
+   double **u_state = (double **)malloc((ntime-1)/3 * sizeof(double*));
+   for(int i = 0; i < (ntime-1)/3; i++) u_state[i] = (double *)malloc(mspace * sizeof(double));
 
-   printf("here 1c.m\n");
+   double **v_state = (double **)malloc((ntime-1)/3 * sizeof(double*));
+   for(int i = 0; i < (ntime-1)/3; i++) v_state[i] = (double *)malloc(mspace * sizeof(double));
+
+   double **w_state = (double **)malloc((ntime-1)/3 * sizeof(double*));
+   for(int i = 0; i < (ntime-1)/3; i++) w_state[i] = (double *)malloc(mspace * sizeof(double));
+   
+   /* Initialize the initial guess vectors */
+   double *u_init=(double*) malloc( mspace*sizeof(double) );
+   double *v_init=(double*) malloc( mspace*sizeof(double) );
+   double *w_init=(double*) malloc( mspace*sizeof(double) );
+
+   srand(seed);
+   for(int i=0; i<mspace; i++)
+   {   
+      double random_value;
+      random_value=(double)rand()/RAND_MAX*2.0-1.0; 
+      u_init[i]=random_value;
+
+      /* random_value=(double)rand()/RAND_MAX*2.0-1.0; */
+      v_init[i]=random_value;
+
+      /* random_value=(double)rand()/RAND_MAX*2.0-1.0; */
+      w_init[i]=random_value;            
+   }
+
+   /* Set the initial guesses and destroy init vectors */
+
+   for(int i = 0; i < (ntime-1)/3; i++)
+   {
+      vec_copy(mspace, u_init, u_state[i]);
+      vec_copy(mspace, v_init, v_state[i]);
+      vec_copy(mspace, w_init, w_state[i]);      
+   }
+
+   app->w_state = w_state;
+   app->u_state = u_state;
+   app->v_state = v_state;
+
+   vec_destroy(u_init);
+   vec_destroy(v_init);
+   vec_destroy(w_init);   
+
+   /**********************************************************************/
+
+   /*printf("here 1c.m\n");*/
    /* Initialize XBraid */
-   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
+   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-2, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
@@ -1040,12 +1101,193 @@ main(int argc, char *argv[])
    braid_SetPrintLevel( core, print_level);       
    braid_SetMaxIter(core, maxiter);
    braid_SetAbsTol(core, tol);
-   printf("here 2c.m\n");
+   /*printf("here 2c.m\n");*/
 
-   printf("here 1d.m\n");
+   /*printf("here 1d.m\n");*/
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
-   printf("here 2d.m\n");
+
+   /* Print out the variables based on the u,v,w_state vars */
+   /*
+   if (access_level > 0)
+   {
+      /**********************************PRINT W OUT**********************************
+      char  filename[255];
+      FILE *file;
+
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.w", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (app->ntime); i++)
+      {
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               fprintf(file, "% 1.14e", w_state[i][j]);
+            }
+            else{
+               fprintf(file, "% 1.14e, ", w_state[i][j]);
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file);
+
+      /**********************PRINT V OUT**********************
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.v", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (app->ntime); i++)
+      {
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               fprintf(file, "% 1.14e", v_state[i][j]);
+            }
+            else{
+               fprintf(file, "% 1.14e, ", v_state[i][j]);
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file); 
+
+      /**********************PRINT U OUT**********************
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.u", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (app->ntime); i++)
+      {
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               fprintf(file, "% 1.14e", u_state[i][j]);
+            }
+            else{
+               fprintf(file, "% 1.14e, ", u_state[i][j]);
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file);
+
+      /**********************PRINT U0 OUT**********************
+      char filename1[255];
+      double *us;
+
+      sprintf(filename1, "%s.%03d", "out/advec-diff-viscous-GS-v2.u0", 000);
+      file = fopen(filename1, "w");
+      vec_create(mspace, &us);
+      vec_copy(mspace, U0, us);
+      for (int j = 0; j < mspace; j++)
+         {
+            if(j!=mspace-1){
+               fprintf(file, "% 1.14e, ", us[j]);
+            }
+            else{
+               fprintf(file, "% 1.14e", us[j]);
+            }
+         }                  
+     
+   }
+   */
+
+   /* Print out the variables based on U */
+   if (access_level > 0)
+   {
+      
+      double **w  = (app->w);
+      double *tmpvec;
+      vec_create(mspace, &tmpvec);
+      /**********************************PRINT W OUT**********************************/
+      char  filename[255];
+      FILE *file;
+
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.w", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (ntime-1)/3; i++)
+      {
+         /*vec_copy(mspace, w[2*ntime+i], tmpvec);*/
+
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               /*printf("If state 1\n");*/
+               fprintf(file, "% 1.14e", w[i+2*(ntime-1)/3][j]);
+            }
+            else{
+               /*printf("else state above\n");*/
+               fprintf(file, "% 1.14e, ", w[i+2*(ntime-1)/3][j]);
+               /*printf("else state below\n");*/
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file);
+      /*printf("After W print\n");*/
+
+      /**********************PRINT V OUT**********************/
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.v", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (ntime-1)/3; i++)
+      {
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               fprintf(file, "% 1.14e", w[i+(ntime-1)/3][j]);
+            }
+            else{
+               /*printf("Here 1\n");*/
+               fprintf(file, "% 1.14e, ", w[i+(ntime-1)/3][j]);
+               /*printf("Here 2\n");*/
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file); 
+
+      /**********************PRINT U OUT**********************/
+      sprintf(filename, "%s.%03d", "out/advec-diff-viscous-GS-v2.out.u", 000);
+      file = fopen(filename, "w");
+      for (int i = 0; i < (ntime-1)/3; i++)
+      {
+         fprintf(file, "%05d: ", (i+1));
+         for(int j=0; j <mspace; j++){
+            if(j==mspace-1){
+               fprintf(file, "% 1.14e", w[i][j]);
+            }
+            else{
+               /*printf("Here 3\n");*/
+               fprintf(file, "% 1.14e, ", w[i][j]);
+               /*printf("Here 4\n");*/
+            }
+         }
+         fprintf(file, "\n");
+      }
+      fflush(file);
+      fclose(file);
+
+      /**********************PRINT U0 OUT**********************/
+      char filename1[255];
+      double *us;
+
+      sprintf(filename1, "%s.%03d", "out/advec-diff-viscous-GS-v2.u0", 000);
+      file = fopen(filename1, "w");
+      vec_create(mspace, &us);
+      vec_copy(mspace, U0, us);
+      for (int j = 0; j < mspace; j++)
+         {
+            if(j!=mspace-1){
+               fprintf(file, "% 1.14e, ", us[j]);
+            }
+            else{
+               fprintf(file, "% 1.14e", us[j]);
+            }
+         }                  
+   }
+
 
    free(app);
    

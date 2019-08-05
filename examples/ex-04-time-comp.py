@@ -22,7 +22,7 @@ from os import sys
 #
 ##
 
-ntime = [8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+ntime = [8, 16, 32, 64, 128, 256, 512];
 ex_04 = zeros(len(ntime))
 ex_04_serial = zeros(len(ntime))
 ex_04_omgrit = zeros(len(ntime))
@@ -100,12 +100,12 @@ for t in tmesh2:
 
 mpl.figure(1)
 mpl.plot(ntime, ex_04_serial, '-k')
-mpl.plot(ntime, ex_04_omgrit, '-g')
+mpl.plot(ntime, ex_04_omgrit, '--')
 mpl.xlabel('Number of time steps')
 mpl.ylabel('Run Time (s)')
 mpl.title('Run times for Linear Quadratic Optimal Control Problem ($\gamma=0.005$)')
 mpl.legend(['Gradient descent', 'OMGrit'])
-
+"""
 mpl.figure(2)
 mpl.plot(tmesh[1:], state_serial[:,0], '-k')
 mpl.plot(tmesh[1:], state_omgrit[:,0], '-g')
@@ -126,5 +126,5 @@ mpl.xlabel('Time (s)')
 mpl.ylabel('State value U_2')
 mpl.title('State solution U_2')
 mpl.legend(['Serial steepest descent solution', 'OMGrit solution', 'Parallel steepest descent solution'])
-
+"""
 mpl.show()
