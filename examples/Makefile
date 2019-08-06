@@ -250,7 +250,7 @@ visc-exp-pde: visc-exp-pde.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
-advec-diff-full-sys: advec-diff-full-sys.c $(BRAID_LIB_FILE)
+advec-diff-rms: advec-diff-rms.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
