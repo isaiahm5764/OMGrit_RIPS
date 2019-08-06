@@ -252,21 +252,17 @@ void
 find_gamma(double *u, int mspace){
   double *tmp;
   vec_create(mspace, &tmp);
-<<<<<<< HEAD
-=======
   vec_copy(mspace, u, tmp);
 
->>>>>>> 9d245253f4d2b22a69f4d047567b4e5c46318850
   u[0] = tmp[0]*tmp[1];
   for(int i=1; i<mspace-1; i++)
   {
     u[i] = tmp[i]*tmp[i+1] - tmp[i]*tmp[i-1];
   }
   u[mspace-1] = -tmp[mspace-1] * tmp[mspace-2];
-<<<<<<< HEAD
-=======
+
   vec_destroy(tmp);
->>>>>>> 9d245253f4d2b22a69f4d047567b4e5c46318850
+
 }
 
 /*------------------------------------*/
