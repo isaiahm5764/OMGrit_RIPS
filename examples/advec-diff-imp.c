@@ -65,6 +65,10 @@ typedef struct _braid_App_struct
    int      mspace;      /* Number of space points included in our state vector */
                          /* So including boundaries we have M+2 space points */
 
+  int      ilower;      /* Lower index for my proc */
+   int      iupper;      /* Upper index for my proc */
+   int      npoints;     /* Number of time points on my proc */
+
    double **w;           /* Adjoint vectors at each time point on my proc */
    double *U0;
    double *ai;
@@ -580,55 +584,75 @@ my_Access(braid_App          app,
           braid_Vector       u,
           braid_AccessStatus astatus)
 {
-   int   done, index;
+   int   done, index, ii;
    int   mspace = (app->mspace);
    double *U0 = (app->U0);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);
-
    if (done)
    {
-      /* Allocate w array in app (ZTODO: This only works on one proc right now) */
+      braid_AccessStatusGetILowerUpper(astatus, &(app->ilower), &(app->iupper));
+      (app->npoints) = (app->iupper) - (app->ilower) + 1;
+
+      /* Allocate w array in app */
       if ((app->w) == NULL)
       {
-         int  ntpoints;
-         braid_AccessStatusGetNTPoints(astatus, &ntpoints);
-         ntpoints++;  /* ntpoints is really the gupper index */
-         (app->w) = (double **) calloc(ntpoints, sizeof(double *));
+         (app->w) = (double **) calloc((app->npoints), sizeof(double *));
       }
 
       braid_AccessStatusGetTIndex(astatus, &index);
-      if (app->w[index] != NULL)
+      ii = index - (app->ilower);
+      if (app->w[ii] != NULL)
       {
-         free(app->w[index]);
+         free(app->w[ii]);
       }
-      vec_create(mspace, &(app->w[index]));
-      vec_copy(mspace, (u->values), (app->w[index]));
+      vec_create(mspace, &(app->w[ii]));
+      vec_copy(mspace, (u->values), (app->w[ii]));
    }
 
-   /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
+   // if (done)
+   // {
+   //    /* Allocate w array in app (ZTODO: This only works on one proc right now) */
+   //    if ((app->w) == NULL)
+   //    {
+   //       int  ntpoints;
+   //       braid_AccessStatusGetNTPoints(astatus, &ntpoints);
+   //       ntpoints++;  /* ntpoints is really the gupper index */
+   //       (app->w) = (double **) calloc(ntpoints, sizeof(double *));
+   //    }
 
-     char  filename[255];
-     FILE *file;
-     int  iter;
-     braid_AccessStatusGetIter(astatus, &iter);
-     braid_AccessStatusGetTIndex(astatus, &index);
-     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-     if(iter%1==0){
-        sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
-        file = fopen(filename, "w");
-        for(int i = 0; i<mspace; i++){
-            if(i<mspace-1){
-               fprintf(file, "%1.14e, ", (u->values)[i]);
-            }
-            else{
-               fprintf(file, "%1.14e", (u->values)[i]);
-            }
-        }
-     fflush(file);
-     fclose(file);
-     }
+   //    braid_AccessStatusGetTIndex(astatus, &index);
+   //    if (app->w[index] != NULL)
+   //    {
+   //       free(app->w[index]);
+   //    }
+   //    vec_create(mspace, &(app->w[index]));
+   //    vec_copy(mspace, (u->values), (app->w[index]));
+   // }
+
+   //  prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. 
+
+   //   char  filename[255];
+   //   FILE *file;
+   //   int  iter;
+   //   braid_AccessStatusGetIter(astatus, &iter);
+   //   braid_AccessStatusGetTIndex(astatus, &index);
+   //   /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+   //   if(iter%1==0){
+   //      sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
+   //      file = fopen(filename, "w");
+   //      for(int i = 0; i<mspace; i++){
+   //          if(i<mspace-1){
+   //             fprintf(file, "%1.14e, ", (u->values)[i]);
+   //          }
+   //          else{
+   //             fprintf(file, "%1.14e", (u->values)[i]);
+   //          }
+   //      }
+   //   fflush(file);
+   //   fclose(file);
+   //   }
 
    return 0;
 }
@@ -640,7 +664,8 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-   *size_ptr = 2*sizeof(double);
+  int mspace = (app->mspace); 
+   *size_ptr = mspace*sizeof(double);
    return 0;
 }
 
@@ -661,7 +686,7 @@ my_BufPack(braid_App           app,
       dbuffer[i] = (u->values)[i];
    }
 
-   braid_BufferStatusSetSize( bstatus,  2*sizeof(double));
+   braid_BufferStatusSetSize( bstatus,  mspace*sizeof(double));
 
    return 0;
 }
@@ -681,7 +706,7 @@ my_BufUnpack(braid_App           app,
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   u->values = (double*) malloc( 2*sizeof(double) );
+   u->values = (double*) malloc( mspace*sizeof(double) );
 
    /* Unpack the buffer */
    for(i = 0; i < mspace; i++)
@@ -916,14 +941,15 @@ main(int argc, char *argv[])
       {
          char  filename[255];
          FILE *file;
-         int   i,j;
+         int   i,j, index;
 
          sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
          file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
+         for (i = 0; i < (app->npoints); i++)
          {
             double **w = (app->w);
-            fprintf(file, "%05d: ", (i+1));
+            index = (app->ilower) + i +1;
+            fprintf(file, "%05d: ", index);
             for(j=0; j <mspace; j++){
                if(j==mspace-1){
                   fprintf(file, "% 1.14e", w[i][j]);
@@ -962,13 +988,13 @@ main(int argc, char *argv[])
          int     i,j;
          double *v;
 
-         double **vs = (double **)malloc(ntime * sizeof(double*));
-         for(int i = 0; i < ntime; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
+         double **vs = (double **)malloc(app->npoints * sizeof(double*));
+         for(int i = 0; i < app->npoints; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
 
          sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create((app->mspace), &v);
-         for (i = 0; i < (app->ntime); i++)
+         for (i = 0; i < (app->npoints); i++)
          {
             double **w = (app->w);
             vec_copy(mspace, w[i], v);
@@ -976,7 +1002,7 @@ main(int argc, char *argv[])
             apply_Vinv(dt, dx, alpha, mspace,v);
 
             /* TODO Dynamical print based on size of v */
-            fprintf(file, "%05d: ", (i+1));
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
             for (j = 0; j < (app->mspace); j++)
             {
                vs[i][j] = v[j];
@@ -1009,11 +1035,15 @@ main(int argc, char *argv[])
 
          sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
          file = fopen(filename, "w");
-         double **u = (double **)malloc(ntime * sizeof(double*));
-         for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
-
-         for (i = 0; i < (app->ntime); i++)
+         double **u = (double **)malloc(app->npoints * sizeof(double*));
+         for(int i = 0; i < app->npoints; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+        vec_create((app->mspace), &v);
+         for (i = 0; i < (app->npoints); i++)
          {
+          double **w = (app->w);
+          vec_copy(mspace, w[i], v);
+            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
+            apply_Vinv(dt, dx, alpha, mspace,v);
             double *vtemp = vs[i];
             if(i==0){
                vec_scale(mspace, dt, vtemp);
@@ -1028,7 +1058,7 @@ main(int argc, char *argv[])
                vec_copy(mspace, vtemp, u[i]);
             }
 
-            fprintf(file, "%05d: ", (i+1));
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
             for (j = 0; j < mspace; j++)
             {
                fprintf(file, "% 1.14e, ", u[i][j]);
@@ -1038,86 +1068,86 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
 
-         double objective_val=0;
+         // double objective_val=0;
 
-         for(int i=0; i<ntime; i++)
-         {
-            for(int j=0; j<mspace; j++)
-            {
-               objective_val += ((u[i][j] - U0[j]) * (u[i][j] - U0[j]) + alpha*vs[i][j]*vs[i][j] ) * dx;
-            }
-            objective_val *= dt;
-         }
-         printf("Objective Function Value: %f \n", objective_val);
+         // for(int i=0; i<ntime; i++)
+         // {
+         //    for(int j=0; j<mspace; j++)
+         //    {
+         //       objective_val += ((u[i][j] - U0[j]) * (u[i][j] - U0[j]) + alpha*vs[i][j]*vs[i][j] ) * dx;
+         //    }
+         //    objective_val *= dt;
+         // }
+         // printf("Objective Function Value: %f \n", objective_val);
       
    }
 
    //code below is used to calculate the evolution of u over time based off of V
 
-   for(int it = 0; it<20; it+=1){
+   // for(int it = 0; it<20; it+=1){
 
-      double **us = (double **)malloc(ntime * sizeof(double*));
-      for(int i = 0; i < ntime; i++) us[i] = (double *)malloc(mspace * sizeof(double));
-        double **u = (double **)malloc(ntime * sizeof(double*));
-      for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
-      FILE *fp;
-      for(int n=0; n<ntime; n++)
-      {
-        char str[100];
-        sprintf(str, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", it, n);
-        fp = fopen(str, "r");
-        char line[1000];
-        fgets(line, 1000, fp);
+   //    double **us = (double **)malloc(ntime * sizeof(double*));
+   //    for(int i = 0; i < ntime; i++) us[i] = (double *)malloc(mspace * sizeof(double));
+   //      double **u = (double **)malloc(ntime * sizeof(double*));
+   //    for(int i = 0; i < ntime; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+   //    FILE *fp;
+   //    for(int n=0; n<ntime; n++)
+   //    {
+   //      char str[100];
+   //      sprintf(str, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", it, n);
+   //      fp = fopen(str, "r");
+   //      char line[1000];
+   //      fgets(line, 1000, fp);
 
-        char *token = strtok(line, ",");
-        us[n][0]=atof(token);
-        int count=1;
-        while(token != NULL)
-        {
-          us[n][count]=atof(token);
-          token = strtok(NULL, ",");
-          count+=1;
-        }
-        fflush(fp);
-        fclose(fp);
-      }
-      for (int i = 0; i < ntime; i++)
-         {
-            double *vtemp = us[i];
-            if(i==0){
-              vec_scale(mspace, 1/(alpha*dx), vtemp);
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, U0, vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-            else{
-              vec_scale(mspace, 1/(alpha*dx), vtemp);
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, u[i-1], vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-         }
-       char  filename[255];
-       FILE *file;
-       /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-          sprintf(filename, "%s.%04d", "out/advec-diff.u", it);
-          file = fopen(filename, "w");
-          for(int n=0; n<ntime; n++){
-          for(int i = 0; i<mspace; i++){
-              if(i<mspace-1){
-                 fprintf(file, "%1.14e, ", u[n][i]);
-              }
-              else{
-                 fprintf(file, "%1.14e\n", u[n][i]);
-              }
-          }
-        }
-       fflush(file);
-       fclose(file);
+   //      char *token = strtok(line, ",");
+   //      us[n][0]=atof(token);
+   //      int count=1;
+   //      while(token != NULL)
+   //      {
+   //        us[n][count]=atof(token);
+   //        token = strtok(NULL, ",");
+   //        count+=1;
+   //      }
+   //      fflush(fp);
+   //      fclose(fp);
+   //    }
+   //    for (int i = 0; i < ntime; i++)
+   //       {
+   //          double *vtemp = us[i];
+   //          if(i==0){
+   //            vec_scale(mspace, 1/(alpha*dx), vtemp);
+   //             vec_scale(mspace, dt, vtemp);
+   //             vec_axpy(mspace, 1.0, U0, vtemp);
+   //             apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+   //             vec_copy(mspace, vtemp, u[i]);
+   //          }
+   //          else{
+   //            vec_scale(mspace, 1/(alpha*dx), vtemp);
+   //             vec_scale(mspace, dt, vtemp);
+   //             vec_axpy(mspace, 1.0, u[i-1], vtemp);
+   //             apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+   //             vec_copy(mspace, vtemp, u[i]);
+   //          }
+   //       }
+   //     char  filename[255];
+   //     FILE *file;
+   //     /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
+   //        sprintf(filename, "%s.%04d", "out/advec-diff.u", it);
+   //        file = fopen(filename, "w");
+   //        for(int n=0; n<ntime; n++){
+   //        for(int i = 0; i<mspace; i++){
+   //            if(i<mspace-1){
+   //               fprintf(file, "%1.14e, ", u[n][i]);
+   //            }
+   //            else{
+   //               fprintf(file, "%1.14e\n", u[n][i]);
+   //            }
+   //        }
+   //      }
+   //     fflush(file);
+   //     fclose(file);
 
-     }
+   //   }
    
 
 

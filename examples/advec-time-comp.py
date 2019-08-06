@@ -22,7 +22,8 @@ from os import sys
 #
 ##
 
-ntime = [256, 512, 1024, 2048]
+ntime = [64, 128, 256, 512]
+#ntime = [64, 128, 256, 512]
 advec_diff_imp = zeros(len(ntime))
 advec_grad_serial = zeros(len(ntime))
 
@@ -39,11 +40,11 @@ for n in ntime:
 
 
 mpl.figure(1)
-mpl.plot(ntime, advec_diff_imp, '-g')
+mpl.plot(ntime, advec_diff_imp, '--')
 mpl.plot(ntime, advec_grad_serial, '-k')
 mpl.xlabel('Number of time steps')
 mpl.ylabel('Run Time (s)')
-mpl.title('Run times for Advection-Diffusion Model Problem ($\\nu=0.1$, 32 space points)')
+mpl.title('Run times for Advection-Diffusion Model Problem ($\\nu=0.1$, 16 space points)')
 mpl.legend(['OMGrit', 'Gradient Descent'])
 
 mpl.show()

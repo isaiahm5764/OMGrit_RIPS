@@ -71,6 +71,10 @@ typedef struct _braid_App_struct
    double *ai;
    double *li;
 
+   double **u_state;      /* u,v,w_state hold the current values. They should be accessile in TriSolve*/
+   double **v_state;      /* Each of these should be of size MN */
+   double **w_state;
+
 
 } my_App;
 

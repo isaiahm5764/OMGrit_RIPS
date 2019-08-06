@@ -327,7 +327,6 @@ int main (int argc, char *argv[])
    ntime  = 64;                         /* Total number of time-steps */
    tstart = 0.0;                        /* Beginning of time-domain */
    tstop  = 1.0;                        /* End of time-domain */
-   deltaT = (tstop - tstart) / ntime;   /* Time-step size */
    mspace = 16;
 
    /* Define optimization parameters */
@@ -397,6 +396,9 @@ int main (int argc, char *argv[])
          return (0);
       }
    }
+
+
+   deltaT = (tstop - tstart) / ntime;   /* Time-step size */
 
    /* Initialize the optimization variables */
    u        = (double*) malloc( mspace*sizeof(double) );      /* State at a time-step */
