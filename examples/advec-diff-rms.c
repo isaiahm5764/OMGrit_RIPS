@@ -91,12 +91,6 @@ vec_create(int size, double **vec_ptr)
    *vec_ptr = (double*) malloc( size*sizeof(double) );
 }
 
-void
-mat_create(int size, double ***vec_ptr)
-{
-   *vec_ptr = (double**) malloc(3*sizeof(double*) );
-   for(int i=0; i<3; i++) *vec_ptr[i] = (double *) malloc(size * sizeof(double));
-}
 
 void
 vec_destroy(double *vec)
@@ -487,14 +481,17 @@ int
 my_Init(braid_App     app,
         double        t,
         braid_Vector *u_ptr)
-{printf("hi 4");
+{
    
    int mspace = (app->mspace);
 
    /* Allocate the vector */
    my_Vector *u;
-   u= (my_Vector *) malloc(3*mspace*sizeof(double));
-   mat_create(mspace, &(u->values));
+   u= (my_Vector *) malloc(sizeof(my_Vector));
+   //one extra component allocated for residual containing 4 entries
+   u->values = (double**) malloc(3*sizeof(double*) );
+   for(int i=0; i<3; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
+
    for (int i = 0; i <= mspace-1; i++)
    {
       u->values[0][i] = ((double)braid_Rand())/braid_RAND_MAX;
@@ -519,9 +516,9 @@ my_Clone(braid_App     app,
 
    /* Allocate the vector */
    v = (my_Vector *) malloc(sizeof(my_Vector));
-   vec_create(mspace, &(v->values[0]));
-   vec_create(mspace, &(v->values[1]));
-   vec_create(mspace, &(v->values[2]));
+   //one extra component allocated for residual containing 4 entries
+   v->values = (double**) malloc(3*sizeof(double*) );
+   for(int i=0; i<3; i++) v->values[i] = (double *) malloc(mspace * sizeof(double));
 
    /* Clone the values */
    for (int i = 0; i<= mspace-1; i++)
@@ -582,8 +579,8 @@ my_SpatialNorm(braid_App     app,
    for (i = 0; i <= mspace-1; i++)
    {
       dot += (u->values)[0][i]*(u->values)[0][i];
-      dot += (u->values)[1][i]*(u->values)[1][i];
-      dot += (u->values)[2][i]*(u->values)[2][i];
+      // dot += (u->values)[1][i]*(u->values)[1][i];
+      // dot += (u->values)[2][i]*(u->values)[2][i];
    }
    *norm_ptr = sqrt(dot);
 
@@ -599,7 +596,7 @@ my_Access(braid_App          app,
           braid_Vector       u,
           braid_AccessStatus astatus)
 {
-   int   done, index;
+   int   done, index, i, j;
    int   mspace = (app->mspace);
    double *U0 = (app->U0);
 
@@ -614,16 +611,22 @@ my_Access(braid_App          app,
          int  ntpoints;
          braid_AccessStatusGetNTPoints(astatus, &ntpoints);
          ntpoints++;  /* ntpoints is really the gupper index */
-         (app->w) = (double ***) calloc(ntpoints, sizeof(double **));
+        (app->w) = (double ***)malloc(ntpoints*sizeof(double**));
+
+        for (i = 0; i< ntpoints; i++) {
+
+         app->w[i] = (double **) malloc(3*sizeof(double *));
+
+          for (j = 0; j < 3; j++) {
+
+              app->w[i][j] = (double *)malloc(mspace*sizeof(double));
+          }
+
+        }
       }
 
       braid_AccessStatusGetTIndex(astatus, &index);
-      if (app->w[0][index] != NULL)
-      {
-         free(app->w[0][index]);
-      }
-      vec_create(mspace, &(app->w[0][index]));
-      vec_copy(mspace, (u->values[0]), (app->w[0][index]));
+      app->w[index][0] = u->values[0];
    }
 
    /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
@@ -863,8 +866,7 @@ main(int argc, char *argv[])
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
    dt = (tstop-tstart)/ntime; 
-    
-  printf("hi");
+
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
    app->myid     = rank;
@@ -902,13 +904,13 @@ main(int argc, char *argv[])
 
 
 
-   printf("hi 1");
+
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
-  printf("hi 2");
+
    /* Set some XBraid(_Adjoint) parameters */
    braid_SetMaxLevels(core, max_levels);
    braid_SetMinCoarse(core, min_coarse);
@@ -922,10 +924,10 @@ main(int argc, char *argv[])
    braid_SetPrintLevel( core, print_level);       
    braid_SetMaxIter(core, maxiter);
    braid_SetAbsTol(core, tol);
-printf("hi 3");
+
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
-printf("hi 4");
+
    dx = 1/((double)(mspace+1));;
    
 
@@ -945,10 +947,10 @@ printf("hi 4");
             fprintf(file, "%05d: ", (i+1));
             for(j=0; j <mspace; j++){
                if(j==mspace-1){
-                  fprintf(file, "% 1.14e", w[0][i][j]);
+                  fprintf(file, "% 1.14e", w[i][0][j]);
                }
                else{
-                  fprintf(file, "% 1.14e, ", w[0][i][j]);
+                  fprintf(file, "% 1.14e, ", w[i][0][j]);
                }
             }
             fprintf(file, "\n");
