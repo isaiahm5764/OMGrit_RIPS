@@ -342,15 +342,14 @@ my_TriResidual(braid_App       app,
    vec_copy(mspace, (r->values[0]), utmp);
    vec_copy(mspace, (r->values[2]), utmp2);
 
+   vec_scale(mspace,dx*dt,utmp);
    apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   apply_Uinv(dt,dx,mspace,utmp2);
    vec_axpy(mspace,1.0,utmp2,utmp);
-   vec_axpy(mspace,-1.0,u0,utmp);
+   vec_axpy(mspace,-dx*dt,u0,utmp);
   
   if (uright != NULL)
    {
    vec_copy(mspace, (uright->values[2]), utmp2);
-   apply_Uinv(dt,dx,mspace,utmp2);
    vec_axpy(mspace,-1.0,utmp2,utmp);
    }
 
@@ -361,8 +360,8 @@ my_TriResidual(braid_App       app,
    vec_copy(mspace, (r->values[1]), utmp);
    vec_copy(mspace, (r->values[2]), utmp2);
 
+   vec_scale(mspace,alpha*dx*dt,utmp);
    apply_D(dt, dx, nu, mspace, utmp2);
-   apply_Vinv(dt,dx,alpha,mspace,utmp2);
    vec_axpy(mspace,-1.0,utmp2,utmp);
 
    vec_copy(mspace, utmp, rtmp2);
@@ -392,10 +391,6 @@ my_TriResidual(braid_App       app,
 
 
 
-
-
-
-
   
  /* Compute residual on first row*/
 
@@ -405,13 +400,12 @@ my_TriResidual(braid_App       app,
    vec_copy(mspace, (uleft->values[0]), utmp);
    vec_copy(mspace, (r->values[2]), utmp2);
 
-   apply_Uinv(dt,dx,mspace,utmp2);
+   vec_scale(mspace,dx*dt,utmp);
    vec_axpy(mspace,-1.0,utmp2,utmp);
-   vec_axpy(mspace,-1.0,u0,utmp);
+   vec_axpy(mspace,-dx*dt,u0,utmp);
   
    vec_copy(mspace, (uleft->values[2]), utmp2);
    apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   apply_Uinv(dt,dx,mspace,utmp2);
    vec_axpy(mspace,1.0,utmp2,utmp);
    }
 
