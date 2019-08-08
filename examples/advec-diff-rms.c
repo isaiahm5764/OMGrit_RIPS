@@ -367,8 +367,37 @@ my_TriResidual(braid_App       app,
 
    vec_copy(mspace, utmp, rtmp2);
    
+
+
+/* Compute residual on fourth row*/
+
+   vec_copy(mspace, (r->values[0]), utmp);
+   vec_copy(mspace, (r->values[1]), utmp2);
+
+   apply_A(dt, dx, nu, mspace, utmp);
+   apply_D(dt, dx, nu, mspace, utmp2);
+   vec_axpy(mspace,-1.0,utmp2,utmp);
+
+   if (uleft != NULL)
+   {
+   vec_copy(mspace, (uleft->values[0]), utmp2);   
+   vec_axpy(mspace,-1.0,utmp2,utmp);
+   }
+
+  else{
+   vec_axpy(mspace,-1.0,u0,utmp);
+  }
+
+  vec_copy(mspace, utmp, rtmp3);
+
+
+
+
+
+
+
   
- /* Compute residual on fourth row*/
+ /* Compute residual on first row*/
 
     if (uleft != NULL)
    {
@@ -389,6 +418,7 @@ my_TriResidual(braid_App       app,
   else{
    /* NEEDS TO BE DEALT WITH */
     vec_scale(mspace, 0.0, utmp);
+
   }
 
   vec_copy(mspace, utmp, rtmp4);
@@ -486,9 +516,9 @@ my_TriSolve(braid_App       app,
    vec_copy(mspace, u->values[3], r4);
 
    /*solve for deltaW*/
-   if(uleft!=NULL){
+
     vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
-   }
+
 
    apply_A(dt,dx,nu,mspace,r1);
    vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
