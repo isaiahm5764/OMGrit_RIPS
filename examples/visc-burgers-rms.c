@@ -370,7 +370,7 @@ my_TriResidual(braid_App       app,
 
    /* Compute residual on second row*/
    vec_copy(mspace, r->values[0], rtmp);
-   vec_scale(mspace, rtmp, dx*dt);
+   vec_scale(mspace, dx*dt, rtmp);
 
    vec_copy(mspace, r->values[2], utmp);
    apply_Aadjoint(dt,dx,nu,mspace,utmp);
@@ -381,7 +381,7 @@ my_TriResidual(braid_App       app,
   }
 
    vec_copy(mspace,r->values[2], utmp);
-   vec_copy(mspace,r->values[0], utmp2)
+   vec_copy(mspace,r->values[0], utmp2);
    apply_B(dt,mspace,nu,utmp,utmp2);
    vec_axpy(mspace, g(dt,dx), utmp, rtmp);
 
@@ -425,7 +425,7 @@ my_TriResidual(braid_App       app,
 
     vec_copy(mspace, uleft->values[2], utmp);
     apply_Aadjoint(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace,utmp,rtmp4);
+    vec_axpy(mspace,1.0,utmp,rtmp4);
 
     vec_axpy(mspace, -1.0, r->values[2], rtmp4);
 
