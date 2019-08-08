@@ -469,7 +469,7 @@ my_TriSolve(braid_App       app,
    double *ai = (app->ai);
    double alpha = (app->alpha);
 
-   double *dW, *dU, *dV;
+   double *dW, *dU, *dV, *storage1, *storage2, *storage3;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
@@ -490,9 +490,13 @@ my_TriSolve(braid_App       app,
    //index 0 refers to U, 1 to V, 2 to W
 
    /* Get the space-step size */
-   dx = 1/((double)(mspace+1));;
-
-
+   dx = 1/((double)(mspace+1));
+   vec_create(mspace, &storage1);
+   vec_create(mspace, &storage2);
+   vec_create(mspace, &storage3);
+   vec_copy(mspace, (u->values)[0], storage1);
+   vec_copy(mspace, (u->values)[1], storage2);
+   vec_copy(mspace, (u->values)[2], storage3);
    /* Create temporary vector */
    vec_create(mspace, &utmp);
    vec_create(mspace, &r1);
@@ -521,7 +525,7 @@ my_TriSolve(braid_App       app,
    vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-    vec_scale(mspace, dx*dt, dW);
+    vec_scale(mspace, dx*dt*.5, dW);
     apply_Phi(dt,dx,nu,mspace,dW,li,ai);
     apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
 
@@ -537,9 +541,13 @@ my_TriSolve(braid_App       app,
 
 
    /* Complete update of solution */
-   vec_axpy(mspace, -1.0, dU, (u->values[0]));
-   vec_axpy(mspace, -1.0, dV, (u->values[1]));
-   vec_axpy(mspace, -1.0, dW, (u->values[2]));
+   vec_axpy(mspace, -1.0, dU, storage1);
+   vec_axpy(mspace, -1.0, dV, storage2);
+   vec_axpy(mspace, -1.0, dW, storage3);
+
+   vec_copy(mspace, storage1, u->values[0]);
+   vec_copy(mspace, storage2, u->values[1]);
+   vec_copy(mspace, storage3, u->values[2]);
 
    
    /* no refinement */
@@ -741,7 +749,8 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-   *size_ptr = 2*sizeof(double);
+  int mspace = app->mspace;
+   *size_ptr = mspace*5*sizeof(double);
    return 0;
 }
 
@@ -753,16 +762,20 @@ my_BufPack(braid_App           app,
            void               *buffer,
            braid_BufferStatus  bstatus)
 {
+
    double *dbuffer = buffer;
    int i;
    int mspace = (app->mspace); 
 
-   for(i = 0; i < mspace; i++)
+   for(i = 0; i <mspace; i++)
    {
       dbuffer[i] = (u->values)[0][i];
+      dbuffer[mspace + i] = (u->values)[1][i];
+      dbuffer[2*mspace + i] = (u->values)[2][i];
+      dbuffer[3*mspace + i] = (u->values)[3][i];
    }
 
-   braid_BufferStatusSetSize( bstatus,  2*sizeof(double));
+   braid_BufferStatusSetSize( bstatus,  mspace*4*sizeof(double));
 
    return 0;
 }
@@ -779,15 +792,19 @@ my_BufUnpack(braid_App           app,
    double    *dbuffer = buffer;
    int i;
    int mspace = (app->mspace); 
-
    /* Allocate memory */
-   u = (my_Vector *) malloc(sizeof(my_Vector));
-   u->values[0] = (double*) malloc( 2*sizeof(double) );
+   u= (my_Vector *) malloc(sizeof(my_Vector));
+   //one extra component allocated for residual containing 4 entries
+   u->values = (double**) malloc(4*sizeof(double*) );
+   for(int i=0; i<4; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
 
    /* Unpack the buffer */
    for(i = 0; i < mspace; i++)
    {
       (u->values)[0][i] = dbuffer[i];
+      (u->values)[1][i] = dbuffer[mspace+i];
+      (u->values)[2][i] = dbuffer[2*mspace+i];
+      (u->values)[3][i] = dbuffer[3*mspace+i];
    }
 
    *u_ptr = u;
