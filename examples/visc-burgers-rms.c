@@ -145,7 +145,7 @@ vec_scale(int size, double alpha, double *x)
  * as required in the solve */
 
 void
-apply_B_inverse(double dt, double dx, double nu, int M, double *u)
+apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
 {   
    /* Find LU decomposition */
    double *ai = (double*) malloc( M*sizeof(double) );
@@ -169,7 +169,7 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u)
    vec_create(M, &w);
    double *f;
    vec_create(M, &f);
-   vec_copy(M, u, f);
+   vec_copy(M, r, f);
    w[0]=f[0];
    for (int i = 1; i < M; i++)
    {
@@ -177,10 +177,10 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u)
    }
 
    /* Now solve Ux=w */ 
-   u[M-1]=w[M-1]/ai[M-1];
+   r[M-1]=w[M-1]/ai[M-1];
    for (int i = M-2; i >= 0; i--)
    {
-      u[i]=(w[i]-bi[i]*u[i+1])/ai[i];      
+      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
    }
 
    vec_destroy(w);
@@ -194,7 +194,7 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u)
 }
 
 void
-apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *l, double *a)
+apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
 {  
    /* Find LU decomposition */
    double *ai = (double*) malloc( M*sizeof(double) );
@@ -214,7 +214,7 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *l, do
    vec_create(M, &w);
    double *f;
    vec_create(M, &f);
-   vec_copy(M, u, f);
+   vec_copy(M, r, f);
    w[0]=f[0];
    for (int i = 1; i < M; i++)
    {
@@ -222,10 +222,10 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *l, do
    }
 
    /* Now solve Ux=w */ 
-   u[M-1]=w[M-1]/a[M-1];
+   r[M-1]=w[M-1]/a[M-1];
    for (int i = M-2; i >= 0; i--)
    {
-      u[i]=(w[i]-bi[i]*u[i+1])/ai[i];      
+      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
    }
 
 
@@ -256,7 +256,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
    }
 
    /* Now solve Ux=w */ 
-   double b = g(dt,dx)-b(dt, dx, nu);
+   double b = -b(dt, dx, nu);
    u[M-1]=w[M-1]/a[M-1];
    for (int i = M-2; i >= 0; i--)
    {
@@ -278,7 +278,7 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
    double *f;
    vec_create(M, &f);
    vec_copy(M, u, f);
-   double b = g(dt,dx)-b(dt, dx, nu);
+   double b = -b(dt, dx, nu);
    w[0]=f[0]/a[0];
    for (int i = 1; i < M; i++)
    {
@@ -638,19 +638,26 @@ my_TriSolve(braid_App       app,
 
    /*solve for deltaW*/
 
-    vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
+    vec_copy(mspace, r4, utmp);
+    apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
+    vec_axpy(mspace, -1.0, utmp, dW);
 
+    vec_copy(mspace, r1, utmp);
+    apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
+    apply_B(dt,mspace,nu,utmp,storage1);
+    vec_axpy(mspace, g(dt,dx), utmp, dW);
 
-   apply_A(dt,dx,nu,mspace,r1);
-   vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
+    vec_copy(mspace, r1, utmp);
+    apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
+    apply_A(dt,dx,nu,mspace,utmp);
+    vec_axpy(mspace, 1.0, utmp, dW);
 
-   vec_axpy(mspace, -1.0/(dx*alpha), r2, dW);
-   vec_axpy(mspace, -1.0, r3, dW);
+    vec_axpy(mspace, -1.0/(alpha*dx), r2, dW);
+
+    vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-    vec_scale(mspace, dx*dt*.5, dW);
-    apply_Phi(dt,dx,nu,mspace,dW,li,ai);
-    apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
+    apply_B_inverse(dt,dx,nu,mspace,storage1);
 
     //update dU and dV based on dW
     //dV
@@ -1102,8 +1109,8 @@ main(int argc, char *argv[])
    double *li = (double*) malloc( (mspace-1)*sizeof(double) );
    ai[0] = 1+2*b(dt,dx,nu);
    for(int i=1; i<mspace; i++){
-      li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/ai[i-1];
-      ai[i] = ai[0]+(b(dt,dx,nu)-g(dt,dx))*li[i-1];
+      li[i-1] = -(b(dt,dx,nu))/ai[i-1];
+      ai[i] = ai[0]+(b(dt,dx,nu))*li[i-1];
    }
    app->ai       = ai;
    app->li       = li;
