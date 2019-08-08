@@ -202,9 +202,9 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
 void
 apply_A(double dt, double dx, double nu, int M, double *u)
 {
-   double A = -g(dt,dx)-b(dt,dx,nu);
+   double A = -b(dt,dx,nu);
    double B = 1+2*b(dt,dx,nu);
-   double C = g(dt,dx)-b(dt,dx,nu);
+   double C = -b(dt,dx,nu);
    double *uold;
    vec_create(M, &uold);
    vec_copy(M, u, uold);
@@ -222,9 +222,9 @@ apply_A(double dt, double dx, double nu, int M, double *u)
 void
 apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 {
-   double A = -g(dt,dx)-b(dt,dx,nu);
+   double A = -b(dt,dx,nu);
    double B = 1+2*b(dt,dx,nu);
-   double C = g(dt,dx)-b(dt,dx,nu);
+   double C = -b(dt,dx,nu);
    double *uold;
    vec_create(M, &uold);
    vec_copy(M, u, uold);
