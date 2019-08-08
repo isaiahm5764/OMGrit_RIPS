@@ -10,14 +10,14 @@ for line in lines:
 mspace=len(split)
 nsteps=len(lines)
 #create the t mesh
-tmesh = linspace(0,1.0,nsteps)
+tmesh = linspace(0,1.0,nsteps+1)
 tmesh_state = linspace(0,1.0,nsteps+1)
-xmesh = linspace(0,1.0,mspace)
+xmesh = linspace(0,1.0,mspace+2)
 xmesh_state = linspace(0,1.0,mspace+2)
 ##
 current_rank = 0
 state_vec = empty([nsteps+1, mspace+2])
-w_vec = empty([nsteps, mspace])
+w_vec = empty([nsteps+1, mspace+2])
 v_vec = empty([nsteps, mspace])
 
 # with open('out/advec-diff-imp.out.u0.000') as f:
@@ -45,15 +45,24 @@ v_vec = empty([nsteps, mspace])
 #     count+=1
 
 # print(state_vec)
-with open('out/advec-diff-imp.out.w.000') as f:
+with open('out/advec-diff-imp.out.u0.000') as f:
     lines = f.readlines()
-count = 0
+split = lines[0].split(',')
+count2=1
+w_vec[0,0] = 0
+w_vec[0,mspace+1] = 0
+for thing in split:
+    w_vec[0,count2]=float(split[count2-1])
+    count2+=1
+with open('out/advec-diff-imp.out.u.000') as f:
+    lines = f.readlines()
+count = 1
 for line in lines:
     line = line[6:]
     split = line.split(',')
-    count2 = 0
+    count2 = 1
     for thing in split:
-        w_vec[count,count2] = float(split[count2])
+        w_vec[count,count2] = float(split[count2-1])
         count2+=1
     count+=1
 

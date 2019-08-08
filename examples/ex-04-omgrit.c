@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "braid.h"
 #include "braid_test.h"
@@ -573,7 +574,7 @@ main(int argc, char *argv[])
    braid_Core  core;
    my_App     *app;
          
-   double      tstart, tstop, dt; 
+   double      tstart, tstop, dt, start, end, time; 
    int         rank, ntime, arg_index;
    double      gamma;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
@@ -715,7 +716,9 @@ main(int argc, char *argv[])
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
+   start=clock();
    braid_Drive(core);
+   end=clock();
 
    if (access_level > 0)
    {
@@ -737,6 +740,18 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
       }
+
+      time = (double)(end-start)/CLOCKS_PER_SEC;
+         printf("Total Run Time: %f s \n", time);
+         {
+            char    filename[255];
+            FILE   *file;
+            sprintf(filename, "%s.%d.%d", "out/ex-04.time", ntime, 10);
+            file = fopen(filename, "w");
+            fprintf(file, "%f", time);
+            fflush(file);
+            fclose(file);
+         }
 
       /* Compute state u from adjoint w and print to file */
       /* ZTODO: This requires communication to do correctly */

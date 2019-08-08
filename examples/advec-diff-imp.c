@@ -736,7 +736,7 @@ main(int argc, char *argv[])
    int         access_level, print_level;
    double      tol;
    double time;
-   start=clock();
+   
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -930,7 +930,9 @@ main(int argc, char *argv[])
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
+   start=clock();
    braid_Drive(core);
+   end=clock();
 
    dx = 1/((double)(mspace+1));;
    
@@ -964,13 +966,13 @@ main(int argc, char *argv[])
          fclose(file);
       }
       
-      end=clock();
+      
          time = (double)(end-start)/CLOCKS_PER_SEC;
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
             FILE   *file;
-            sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
+            sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 6);
             file = fopen(filename, "w");
             fprintf(file, "%f", time);
             fflush(file);
