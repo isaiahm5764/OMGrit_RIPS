@@ -388,6 +388,8 @@ my_TriResidual(braid_App       app,
 
   vec_copy(mspace, utmp, rtmp3);
 
+  /* Compute residual for U^n-1 equation */
+
 
    /* Copy temporary residual vector into residual */
    vec_copy(mspace, rtmp, (r->values[0]));
@@ -419,19 +421,20 @@ my_TriSolve(braid_App       app,
 {
 
    double  t, tprev, tnext, dt, dx;
-   double *utmp;
+   double *utmp, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
    int mspace = (app->mspace);
    double nu = (app->nu);
    double *li = (app->li);
    double *ai = (app->ai);
    double alpha = (app->alpha);
-   double *u0 = (app->U0);
 
    double *dW, *dU, *dV;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
    for(int i=0; i<mspace; i++) dW[i]=0.0;
+   for(int i=0; i<mspace; i++) dV[i]=0.0;
+   for(int i=0; i<mspace; i++) dU[i]=0.0;
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -451,140 +454,46 @@ my_TriSolve(braid_App       app,
 
    /* Create temporary vector */
    vec_create(mspace, &utmp);
+   vec_create(mspace, &r1);
+   vec_create(mspace, &r2);
+   vec_create(mspace, &r3);
+   vec_create(mspace, &r4);
 
-   
+   //call our residual routine
+   my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
+
+   //copy residual vectors into temp vectors
+   vec_copy(mspace, u->values[0], r1);
+   vec_copy(mspace, u->values[1], r2);
+   vec_copy(mspace, u->values[2], r3);
+   vec_copy(mspace, u->values[3], r4);
+
    /*solve for deltaW*/
+   if(uleft!=NULL){
+    vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
+   }
 
-   if(uleft==NULL){
-    //for n=1
-    vec_copy(mspace, (u->values[2]), utmp);
-    vec_axpy(mspace, dt/(alpha*dx), utmp, dW);
-    apply_Aadjoint(dt, dx, nu, mspace, utmp);
-    apply_A(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, 1.0/(dx*dt), utmp, dW);
+   apply_A(dt,dx,nu,mspace,r1);
+   vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
 
-    vec_copy(mspace, u0, utmp);
-    vec_axpy(mspace, 1.0, utmp, dW);
-    apply_A(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, -1.0, utmp, dW);
+   vec_axpy(mspace, -1.0/(dx*dt), r2, dW);
+   vec_axpy(mspace, -1.0, r3, dW);
 
-    vec_copy(mspace, uright->values[2], utmp);
-    apply_A(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, 1.0/(dx*dt), utmp, dW);
-    
-
-    //apply c_tilde inverse
+   //apply c_tilde inverse
     vec_scale(mspace, dx*dt, dW);
     apply_Phi(dt,dx,nu,mspace,dW,li,ai);
     apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
 
-    /* update dU and dV based on dW */
-      //dV
-      vec_axpy(mspace, 1.0, u->values[1], dV);
-      vec_axpy(mspace, -1.0/(alpha*dx), u->values[2], dV);
-      vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
+    //update dU and dV based on dW
+    //dV
+    vec_axpy(mspace, 1.0/(alpha*dx*dt), u->values[1], dV);
+    vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
+    //dU
+    vec_axpy(mspace, 1.0/(dx*dt), u->values[0], dU);
+    vec_copy(mspace, dW, utmp);
+    apply_Aadjoint(dt,dx,nu,mspace,utmp);
+    vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
 
-      //dU
-      vec_axpy(mspace, 1.0, u->values[0], dU);
-      vec_copy(mspace,u->values[2],utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, 1.0/(dx*dt), utmp, dU);
-      vec_axpy(mspace, -1.0,u0, dU);
-      vec_axpy(mspace, -1.0/(dx*dt),uright->values[2] , dU);
-      vec_copy(mspace, dW, utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
-
-   }
-    else if(uright==NULL){
-    //for n=N
-      vec_copy(mspace, u->values[2], utmp);
-      vec_axpy(mspace, 1.0, utmp, dW);
-      vec_axpy(mspace, dt*dt/alpha, utmp, dW);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      apply_A(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, 1.0, utmp, dW);
-
-      vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, dx*dt, utmp, dW);
-      apply_A(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -dx*dt, utmp, dW);
-
-      vec_copy(mspace, uleft->values[2], utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -1.0, utmp, dW);
-
-      //apply c_tilde inverse
-      vec_scale(mspace, dt*dx, dW);
-      apply_Phi(dt,dx,nu,mspace,dW,li,ai);
-      apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
-
-      /* update dU and dV based on dW */
-      //dV
-      vec_axpy(mspace, 1.0, u->values[1], dV);
-      vec_axpy(mspace, -1.0/(alpha*dx), u->values[2], dV);
-      vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
-
-      //dU
-      vec_axpy(mspace, 1.0, u->values[0], dU);
-      vec_copy(mspace,u->values[2],utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, 1.0/(dx*dt), utmp, dU);
-      vec_axpy(mspace, -1.0,u0, dU);
-      vec_copy(mspace, dW, utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
-      
-
-
-   }
-   else{
-    //for 1<n<N
-    
-
-      vec_copy(mspace, u->values[2], utmp);
-      vec_axpy(mspace, 1.0, utmp, dW);
-      vec_axpy(mspace, dt*dt/alpha, utmp, dW);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      apply_A(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, 1.0, utmp, dW);
-
-      vec_copy(mspace, u0, utmp);
-      vec_axpy(mspace, dx*dt, utmp, dW);
-      apply_A(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -dx*dt, utmp, dW);
-
-      vec_copy(mspace, uright->values[2], utmp);
-      apply_A(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace,-1.0, utmp, dW);
-
-      vec_copy(mspace, uleft->values[2], utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -1.0, utmp, dW);
-
-      //apply c_tilde inverse
-      vec_scale(mspace, dt*dx, dW);
-      apply_Phi(dt,dx,nu,mspace,dW,li,ai);
-      apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
-
-      /* update dU and dV based on dW */
-      //dV
-      vec_axpy(mspace, 1.0, u->values[1], dV);
-      vec_axpy(mspace, -1.0/(alpha*dx), u->values[2], dV);
-      vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
-
-      //dU
-      vec_axpy(mspace, 1.0, u->values[0], dU);
-      vec_copy(mspace,u->values[2],utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, 1.0/(dx*dt), utmp, dU);
-      vec_axpy(mspace, -1.0,u0, dU);
-      vec_axpy(mspace, -1.0/(dx*dt),uright->values[2] , dU);
-      vec_copy(mspace, dW, utmp);
-      apply_Aadjoint(dt,dx,nu,mspace,utmp);
-      vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
-
-   }
 
    /* Complete update of solution */
    vec_axpy(mspace, -1.0, dU, (u->values[0]));
