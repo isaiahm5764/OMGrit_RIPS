@@ -286,6 +286,34 @@ apply_DAdjoint(double dt, double dx, double nu, int M, double *v)
     }
 }
 
+//applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
+void 
+apply_B(double dt, int mspace, double nu, double *u, double *uleft){
+  u[0] = uleft[1] * u[0]  -uleft[1] * u[1];
+  for(int i=1; i<mspace-1; i++)
+  {
+    u[i] = uleft[i-1]*u[i-1] + u[i] * (uleft[i+1] - uleft[i-1])  -uleft[i+1]*u[i+1];
+  }
+  u[mspace-1] = uleft[mspace-2] * u[mspace-2] + -uleft[mspace-2] * u[mspace-1];
+}
+
+void 
+find_gamma(double *u, int mspace){
+  double *tmp;
+  vec_create(mspace, &tmp);
+  vec_copy(mspace, u, tmp);
+
+  u[0] = tmp[0]*tmp[1];
+  for(int i=1; i<mspace-1; i++)
+  {
+    u[i] = tmp[i]*tmp[i+1] - tmp[i]*tmp[i-1];
+  }
+  u[mspace-1] = -tmp[mspace-1] * tmp[mspace-2];
+
+  vec_destroy(tmp);
+
+}
+
 /*------------------------------------*/
 
 /*--------------------------------------------------------------------------
@@ -341,56 +369,49 @@ my_TriResidual(braid_App       app,
    vec_create(mspace, &utmp2);
 
    /* Compute residual on second row*/
+   vec_copy(mspace, r->values[0], rtmp);
+   vec_scale(mspace, rtmp, dx*dt);
 
-   vec_copy(mspace, (r->values[0]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
+   vec_copy(mspace, r->values[2], utmp);
+   apply_Aadjoint(dt,dx,nu,mspace,utmp);
+   vec_axpy(mspace, 1.0, utmp, rtmp);
 
-   vec_scale(mspace,dx*dt,utmp);
-   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,1.0,utmp2,utmp);
-   vec_axpy(mspace,-dx*dt,u0,utmp);
-  
-  if (uright != NULL)
-   {
-   vec_copy(mspace, (uright->values[2]), utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-   }
+  if(uright!=NULL){
+    vec_axpy(mspace, -1.0, uright->values[2], rtmp);
+  }
 
-  vec_copy(mspace, utmp, rtmp);
+   vec_copy(mspace,r->values[2], utmp);
+   vec_copy(mspace,r->values[0], utmp2)
+   apply_B(dt,mspace,nu,utmp,utmp2);
+   vec_axpy(mspace, g(dt,dx), utmp, rtmp);
+
+   vec_axpy(mspace, -dx*dt, u0, rtmp);
+
 
   /* Compute residual on third row*/
 
-   vec_copy(mspace, (r->values[1]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
-
-   vec_scale(mspace,alpha*dx*dt,utmp);
-   apply_D(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-
-   vec_copy(mspace, utmp, rtmp2);
+   vec_copy(mspace, r->values[1], rtmp2);
+   vec_scale(mspace, alpha*dx*dt, rtmp2);
+   vec_axpy(mspace, -dt, r->values[2], rtmp2);
    
 
 
 /* Compute residual on fourth row*/
 
-   vec_copy(mspace, (r->values[0]), utmp);
-   vec_copy(mspace, (r->values[1]), utmp2);
+   vec_copy(mspace, r->values[0], rtmp3);
+   apply_A(dt,dx,nu,mspace,rtmp3);
 
-   apply_A(dt, dx, nu, mspace, utmp);
-   apply_D(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-
-   if (uleft != NULL)
-   {
-   vec_copy(mspace, (uleft->values[0]), utmp2);   
-   vec_axpy(mspace,-1.0,utmp2,utmp);
+   if(uleft!=NULL){
+    vec_axpy(mspace, -1.0, uleft->values[0], rtmp3);
+   }else{
+    vec_axpy(mspace, -1.0, u0, rtmp3);
    }
 
-  else{
-   vec_axpy(mspace,-1.0,u0,utmp);
-  }
+   vec_copy(mspace, r->values[0], utmp);
+   find_gamma(utmp, mspace);
+   vec_axpy(mspace, g(dt,dx), utmp, rtmp3);
 
-  vec_copy(mspace, utmp, rtmp3);
+   vec_axpy(mspace, -dt, r->values[1], rtmp3);
 
 
 
@@ -399,26 +420,28 @@ my_TriResidual(braid_App       app,
 
     if (uleft != NULL)
    {
+    vec_copy(mspace,uleft->values[0], rtmp4);
+    vec_scale(mspace,dx*dt,rtmp4);
 
-   vec_copy(mspace, (uleft->values[0]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
+    vec_copy(mspace, uleft->values[2], utmp);
+    apply_Aadjoint(dt,dx,nu,mspace,utmp);
+    vec_axpy(mspace,utmp,rtmp4);
 
-   vec_scale(mspace,dx*dt,utmp);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-   vec_axpy(mspace,-dx*dt,u0,utmp);
-  
-   vec_copy(mspace, (uleft->values[2]), utmp2);
-   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,1.0,utmp2,utmp);
+    vec_axpy(mspace, -1.0, r->values[2], rtmp4);
+
+    vec_copy(mspace, uleft->values[2], utmp);
+    vec_copy(mspace, uleft->values[0], utmp2);
+    apply_B(dt,mspace,nu,utmp,utmp2);
+    vec_axpy(mspace, g(dt,dx), utmp, rtmp4);
+
+    vec_axpy(mspace, -dx*dt, u0, rtmp4);
    }
 
   else{
    /* NEEDS TO BE DEALT WITH */
     vec_scale(mspace, 0.0, utmp);
-
+    vec_copy(mspace, utmp, rtmp4);
   }
-
-  vec_copy(mspace, utmp, rtmp4);
 
   if (f != NULL)
    {
@@ -726,6 +749,8 @@ my_Access(braid_App          app,
       app->w[ii][1] = u->values[1];
       app->w[ii][2] = u->values[2];
    }
+
+
 
    return 0;
 }
