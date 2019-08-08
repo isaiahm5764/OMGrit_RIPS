@@ -70,6 +70,9 @@ typedef struct _braid_App_struct
    double *ai;
    double *li;
 
+   int ilower;
+   int iupper;
+   int npoints;
 
 } my_App;
 
@@ -681,9 +684,8 @@ my_Access(braid_App          app,
           braid_Vector       u,
           braid_AccessStatus astatus)
 {
-   int   done, index, i, j;
+   int   done, index, i, j, ii;
    int   mspace = (app->mspace);
-   
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);
@@ -697,47 +699,21 @@ my_Access(braid_App          app,
          braid_AccessStatusGetNTPoints(astatus, &ntpoints);
          ntpoints++;  /* ntpoints is really the gupper index */
         (app->w) = (double ***)malloc(ntpoints*sizeof(double**));
-
         for (i = 0; i< ntpoints; i++) {
-
          app->w[i] = (double **) malloc(3*sizeof(double *));
-
           for (j = 0; j < 3; j++) {
-
               app->w[i][j] = (double *)malloc(mspace*sizeof(double));
           }
-
         }
       }
-
+      braid_AccessStatusGetILowerUpper(astatus, &(app->ilower), &(app->iupper));
+      (app->npoints) = (app->iupper) - (app->ilower) + 1;
       braid_AccessStatusGetTIndex(astatus, &index);
-      app->w[index][0] = u->values[0];
-      app->w[index][1] = u->values[1];
-      app->w[index][2] = u->values[2];
+      ii = index - (app->ilower);
+      app->w[ii][0] = u->values[0];
+      app->w[ii][1] = u->values[1];
+      app->w[ii][2] = u->values[2];
    }
-
-   /* prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. */
-
-     // char  filename[255];
-     // FILE *file;
-     // int  iter;
-     // braid_AccessStatusGetIter(astatus, &iter);
-     // braid_AccessStatusGetTIndex(astatus, &index);
-     // /* file format is advec-diff-btcs.out.{iteration #}.{time index} */
-     // if(iter%1==0){
-     //    sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
-     //    file = fopen(filename, "w");
-     //    for(int i = 0; i<mspace; i++){
-     //        if(i<mspace-1){
-     //           fprintf(file, "%1.14e, ", (u->values)[i]);
-     //        }
-     //        else{
-     //           fprintf(file, "%1.14e", (u->values)[i]);
-     //        }
-     //    }
-     // fflush(file);
-     // fclose(file);
-     // }
 
    return 0;
 }
@@ -750,7 +726,7 @@ my_BufSize(braid_App           app,
            braid_BufferStatus  bstatus)
 {
   int mspace = app->mspace;
-   *size_ptr = mspace*5*sizeof(double);
+   *size_ptr = mspace*4*sizeof(double);
    return 0;
 }
 
@@ -1033,14 +1009,15 @@ main(int argc, char *argv[])
       {
          char  filename[255];
          FILE *file;
-         int   i,j;
+         int   i,j,index;
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.u", (app->myid));
          file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
+         for (i = 0; i < (app->npoints); i++)
          {
             double ***w = (app->w);
-            fprintf(file, "%05d: ", (i+1));
+            index = (app->ilower) + i +1;
+            fprintf(file, "%05d: ", index);
             for(j=0; j <mspace; j++){
                if(j==mspace-1){
                   fprintf(file, "% 1.14e", w[i][0][j]);
@@ -1058,7 +1035,7 @@ main(int argc, char *argv[])
 
          double *us;
 
-         sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
+         sprintf(filename1, "%s.%03d", "out/advec-diff-rms.out.u0", (app->myid));
          file = fopen(filename1, "w");
          vec_create(mspace, &us);
          vec_copy(mspace, U0, us);
@@ -1073,12 +1050,13 @@ main(int argc, char *argv[])
             }
          vec_destroy(us);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.v", (app->myid));
          file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
+         for (i = 0; i < (app->npoints); i++)
          {
             double ***w = (app->w);
-            fprintf(file, "%05d: ", (i+1));
+            index = (app->ilower) + i +1;
+            fprintf(file, "%05d: ", index);
             for(j=0; j <mspace; j++){
                if(j==mspace-1){
                   fprintf(file, "% 1.14e", w[i][1][j]);
@@ -1092,12 +1070,13 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.w", (app->myid));
          file = fopen(filename, "w");
-         for (i = 0; i < (app->ntime); i++)
+         for (i = 0; i < (app->npoints); i++)
          {
             double ***w = (app->w);
-            fprintf(file, "%05d: ", (i+1));
+            index = (app->ilower) + i +1;
+            fprintf(file, "%05d: ", index);
             for(j=0; j <mspace; j++){
                if(j==mspace-1){
                   fprintf(file, "% 1.14e", w[i][2][j]);
