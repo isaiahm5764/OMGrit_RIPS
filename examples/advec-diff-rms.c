@@ -552,6 +552,18 @@ my_TriSolve(braid_App       app,
    vec_copy(mspace, storage2, u->values[1]);
    vec_copy(mspace, storage3, u->values[2]);
 
+   vec_destroy(r1);
+   vec_destroy(r2);
+   vec_destroy(r3);
+   vec_destroy(r4);
+   vec_destroy(utmp);
+   vec_destroy(storage1);
+   vec_destroy(storage2);
+   vec_destroy(storage3);
+   vec_destroy(dU);
+   vec_destroy(dV);
+   vec_destroy(dW);
+
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
