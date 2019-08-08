@@ -302,7 +302,7 @@ my_TriResidual(braid_App       app,
 {
    double  t, tprev, tnext, dt, dx;
    double  alpha = (app->alpha);
-   double *rtmp,*rtmp2,*rtmp3, *utmp, *utmp2;
+   double *rtmp,*rtmp2,*rtmp3,*rtmp4, *utmp, *utmp2;
    int     level, index;
    int     mspace = (app->mspace);
    double *u0 = (app->U0);
@@ -333,10 +333,11 @@ my_TriResidual(braid_App       app,
    vec_create(mspace, &rtmp);
    vec_create(mspace, &rtmp2);
    vec_create(mspace, &rtmp3);
+   vec_create(mspace, &rtmp4);
    vec_create(mspace, &utmp);
    vec_create(mspace, &utmp2);
 
-   /* Compute residual on first equation*/
+   /* Compute residual on second row*/
 
    vec_copy(mspace, (r->values[0]), utmp);
    vec_copy(mspace, (r->values[2]), utmp2);
@@ -355,7 +356,7 @@ my_TriResidual(braid_App       app,
 
   vec_copy(mspace, utmp, rtmp);
 
-  /* Compute residual on second equation*/
+  /* Compute residual on third row*/
 
    vec_copy(mspace, (r->values[1]), utmp);
    vec_copy(mspace, (r->values[2]), utmp2);
@@ -367,26 +368,40 @@ my_TriResidual(braid_App       app,
    vec_copy(mspace, utmp, rtmp2);
    
   
- /* Compute residual on third equation*/
+ /* Compute residual on fourth row*/
 
-   vec_copy(mspace, (r->values[0]), utmp);
-   vec_copy(mspace, (r->values[1]), utmp2);
-
-   apply_A(dt, dx, nu, mspace, utmp);
-   apply_D(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-  
-  if (uleft != NULL)
+    if (uleft != NULL)
    {
-   vec_copy(mspace, (uleft->values[0]), utmp2);
+
+   vec_copy(mspace, (uleft->values[0]), utmp);
+   vec_copy(mspace, (r->values[2]), utmp2);
+
+   apply_Uinv(dt,dx,mspace,utmp2);
    vec_axpy(mspace,-1.0,utmp2,utmp);
+   vec_axpy(mspace,-1.0,u0,utmp);
+  
+   vec_copy(mspace, (uleft->values[2]), utmp2);
+   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
+   apply_Uinv(dt,dx,mspace,utmp2);
+   vec_axpy(mspace,1.0,utmp2,utmp);
    }
 
   else{
-   vec_axpy(mspace,-1.0,u0,utmp);
+   /* NEEDS TO BE DEALT WITH */
+    vec_scale(mspace, 0.0, utmp);
   }
 
-  vec_copy(mspace, utmp, rtmp3);
+  vec_copy(mspace, utmp, rtmp4);
+
+  if (f != NULL)
+   {
+      /* rtmp = rtmp - f */
+      vec_axpy(mspace, -1.0, (f->values[0]), rtmp);
+      vec_axpy(mspace, -1.0, (f->values[1]), rtmp2);
+      vec_axpy(mspace, -1.0, (f->values[2]), rtmp3);
+      vec_axpy(mspace, -1.0, (f->values[3]), rtmp4);
+   }
+
 
   /* Compute residual for U^n-1 equation */
 
@@ -395,11 +410,13 @@ my_TriResidual(braid_App       app,
    vec_copy(mspace, rtmp, (r->values[0]));
    vec_copy(mspace, rtmp2, (r->values[1]));
    vec_copy(mspace, rtmp3, (r->values[2]));
+   vec_copy(mspace, rtmp4, (r->values[3]));
    
    /* Destroy temporary vectors */
    vec_destroy(rtmp);
    vec_destroy(rtmp2);
    vec_destroy(rtmp3);
+   vec_destroy(rtmp4);
    vec_destroy(utmp);
    vec_destroy(utmp2);
    
@@ -476,7 +493,7 @@ my_TriSolve(braid_App       app,
    apply_A(dt,dx,nu,mspace,r1);
    vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
 
-   vec_axpy(mspace, -1.0/(dx*dt), r2, dW);
+   vec_axpy(mspace, -1.0/(dx*alpha), r2, dW);
    vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
