@@ -155,11 +155,11 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
 
    for(int i=1; i<M-1; i++){
       bi[i-1] = -b(dt,dx,nu)-g(dt,dx)*u[i];
-      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i-1])/ai[i-1];
+      li[i-1] = (-b(dt,dx,nu)+g(dt,dx)*u[i-1])/ai[i-1];
       ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
    }
    bi[M-2] = -b(dt,dx,nu)-g(dt,dx)*u[M-1];
-   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-2])/ai[M-2];
+   li[M-2] = (-b(dt,dx,nu)+g(dt,dx)*u[M-2])/ai[M-2];
    ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
 
 
@@ -636,7 +636,7 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-     apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
     apply_C(dt,dx,nu,mspace,storage3,dW);
     apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
 
