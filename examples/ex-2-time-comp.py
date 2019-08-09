@@ -25,13 +25,18 @@ from os import sys
 ntime = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125,130];
 ex_2_gs = zeros(len(ntime))
 ex_2_gj = zeros(len(ntime))
-ex_2_omgrit = zeros(len(ntime))
+ex_2_omgrit_1p = zeros(len(ntime))
+ex_2_omgrit_8p = zeros(len(ntime))
+
 
 count=0
 for n in ntime:
-    with open('out/advec-diff-imp-full-res.time.' + str(n)) as f:
+    with open('out/advec-diff-imp.time.' + str(n)+".1") as f:
         lines = f.readlines()
-    ex_2_omgrit[count] = lines[0]
+    ex_2_omgrit_1p[count] = lines[0]
+    with open('out/advec-diff-imp.time.' + str(n)+".8") as f:
+        lines = f.readlines()
+    ex_2_omgrit_8p[count] = lines[0]    
     with open('out/block_gs.time.' + str(n)) as f:
         lines = f.readlines()
     ex_2_gs[count] = lines[0]
@@ -44,10 +49,11 @@ for n in ntime:
 mpl.figure(1)
 mpl.plot(ntime, ex_2_gs, '-o')
 mpl.plot(ntime, ex_2_gj, '-+')
-mpl.plot(ntime, ex_2_omgrit, '-k')
+mpl.plot(ntime, ex_2_omgrit_1p, '--')
+mpl.plot(ntime, ex_2_omgrit_8p, '-k')
 mpl.xlabel('Number of iterations')
 mpl.ylabel('Run Time (s)')
 mpl.title('Run times for Linear Advection Diffusion Problem')
-mpl.legend(['Block Gauss Seidel', 'Block Jacobi',"OMGrit"])
+mpl.legend(['Block Gauss Seidel', 'Block Jacobi',"OMGrit 1 proc", "OMGrit 8 proc"])
 
 mpl.show()
