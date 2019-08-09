@@ -519,10 +519,11 @@ my_TriSolve(braid_App       app,
    else {
     rtmp[0] = -rtmp[0]/(dx*dt + (alpha*dx/dt)*(1+4*b(dt,dx,nu)+6*(b(dt,dx,nu))*(b(dt,dx,nu))) + alpha*((1+3*b(dt,dx,nu))*(utmp[1])+g(dt,dx)*(utmp[1]*utmp[1])));
     for(int i=1; i<mspace-1; i++){
-      rtmp[i]=-rtmp[i]/(dx*dt + (alpha*dx/dt)*(1+4*b(dt,dx,nu)+6*(b(dt,dx,nu))*(b(dt,dx,nu))) + alpha*((1+3*b(dt,dx,nu))*(utmp[i+1]-utmp[i-1])+g(dt,dx)*(utmp[i+1]*utmp[i+1]+utmp[i-1]*utmp[i-1]+utmp[i-1]*utmp[i+1])));
+      rtmp[i]=-rtmp[i]/(dx*dt + (alpha*dx/dt)*(1+4*b(dt,dx,nu)+6*(b(dt,dx,nu))*(b(dt,dx,nu))) + alpha*((1+3*b(dt,dx,nu))*(utmp[i+1]-utmp[i-1])+g(dt,dx)*(utmp[i+1]*utmp[i+1]+utmp[i-1]*utmp[i-1]-utmp[i-1]*utmp[i+1])));
+      // printf("Dividing by %f",(dx*dt + (alpha*dx/dt)*(1+2*b(dt,dx,nu)+6*(b(dt,dx,nu))*(b(dt,dx,nu))) + alpha*((1+3*b(dt,dx,nu))*(utmp[i+1]-utmp[i-1])+2*g(dt,dx)*(utmp[i+1]*utmp[i+1]+utmp[i-1]*utmp[i-1]+utmp[i-1]*utmp[i+1]))));
     }
     rtmp[mspace-1] = -rtmp[mspace-1]/(dx*dt + (alpha*dx/dt)*(1+4*b(dt,dx,nu)+6*(b(dt,dx,nu))*(b(dt,dx,nu))) + alpha*((1+3*b(dt,dx,nu))*(-utmp[mspace-2])+g(dt,dx)*(utmp[mspace-2]*utmp[mspace-2])));
-
+    // printf("\n ========================================================================================================= \n");
    }
 
 
@@ -706,7 +707,8 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-   *size_ptr = 2*sizeof(double);
+   int mspace = (app->mspace); 
+   *size_ptr = mspace*sizeof(double);
    return 0;
 }
 
@@ -747,7 +749,7 @@ my_BufUnpack(braid_App           app,
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   u->values = (double*) malloc( 2*sizeof(double) );
+   u->values = (double*) malloc( mspace*sizeof(double) );
 
    /* Unpack the buffer */
    for(i = 0; i < mspace; i++)

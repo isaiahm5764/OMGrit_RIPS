@@ -2,13 +2,17 @@ from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
-with open('out/advec-diff-imp.out.w.000') as f:
+
+#change here to figure how many processors were used
+num_proc = 8
+
+with open('out/advec-diff-rms.out.w.000') as f:
         lines = f.readlines()
 for line in lines:
     line = line[6:]
     split = line.split(',')
 mspace=len(split)
-nsteps=len(lines)
+nsteps=len(lines)*num_proc
 #create the t mesh
 tmesh = linspace(0,1.0,nsteps)
 tmesh_state = linspace(0,1.0,nsteps+1)
@@ -45,17 +49,59 @@ v_vec = empty([nsteps, mspace])
 #     count+=1
 
 # print(state_vec)
-with open('out/advec-diff-imp.out.w.000') as f:
+
+
+with open('out/advec-diff-rms.out.u0.000') as f:
     lines = f.readlines()
+split = lines[0].split(',')
+count2=1
+state_vec[0,0] = 0
+state_vec[0,mspace+1] = 0
+for thing in split:
+    state_vec[0,count2]=float(split[count2-1])
+    count2+=1
+
+count = 1
+for proc in range(0,num_proc,1):
+    proc = "%03d"%proc
+    with open('out/advec-diff-rms.out.u.'+proc) as f:
+        lines = f.readlines()
+    for line in lines:
+        line = line[6:]
+        split = line.split(',')
+        count2 = 1
+        for thing in split:
+            state_vec[count,count2] = float(split[count2-1])
+            count2+=1
+        count+=1
+
 count = 0
-for line in lines:
-    line = line[6:]
-    split = line.split(',')
-    count2 = 0
-    for thing in split:
-        w_vec[count,count2] = float(split[count2])
-        count2+=1
-    count+=1
+for proc in range(0,num_proc,1):
+    proc = "%03d"%proc
+    with open('out/advec-diff-rms.out.v.'+proc) as f:
+        lines = f.readlines()
+    for line in lines:
+        line = line[6:]
+        split = line.split(',')
+        count2 = 0
+        for thing in split:
+            v_vec[count,count2] = float(split[count2])
+            count2+=1
+        count+=1
+count = 0
+for proc in range(0,num_proc,1):
+    proc = "%03d"%proc
+    with open('out/advec-diff-rms.out.w.'+proc) as f:
+        lines = f.readlines()
+    for line in lines:
+        line = line[6:]
+        split = line.split(',')
+        count2 = 0
+        for thing in split:
+            w_vec[count,count2] = float(split[count2])
+            count2+=1
+        count+=1
+
 
 # with open('out/advec-diff-imp.out.v.000') as f:
 #     lines = f.readlines()
@@ -104,28 +150,29 @@ y = range(ny)
 hf = plt.figure(1)
 ha = hf.add_subplot(111, projection='3d')
 
-# X, Y = numpy.meshgrid(xmesh_state, tmesh_state)  # `plot_surface` expects `x` and `y` data to be 2D
-# ha.plot_surface(X, Y, state_vec)
-# ha.set_xlabel('X (position)')
-# ha.set_ylabel('t (time)')
-# ha.set_zlabel('U value')
-
-# hf = plt.figure(2)
-# ha = hf.add_subplot(111, projection='3d')
-
 X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data to be 2D
 ha.plot_surface(X, Y, w_vec)
 ha.set_xlabel('X (position)')
 ha.set_ylabel('t (time)')
 ha.set_zlabel('W value')
 
-# hf = plt.figure(3)
-# ha = hf.add_subplot(111, projection='3d')
+hf = plt.figure(2)
+ha = hf.add_subplot(111, projection='3d')
 
-# X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data to be 2D
-# ha.plot_surface(X, Y, v_vec)
-# ha.set_xlabel('X (position)')
-# ha.set_ylabel('t (time)')
-# ha.set_zlabel('V value')
+X, Y = numpy.meshgrid(xmesh, tmesh)  # `plot_surface` expects `x` and `y` data to be 2D
+ha.plot_surface(X, Y, v_vec)
+ha.set_xlabel('X (position)')
+ha.set_ylabel('t (time)')
+ha.set_zlabel('V value')
+
+hf = plt.figure(3)
+ha = hf.add_subplot(111, projection='3d')
+
+X, Y = numpy.meshgrid(xmesh_state, tmesh_state)  # `plot_surface` expects `x` and `y` data to be 2D
+ha.plot_surface(X, Y, state_vec)
+ha.set_xlabel('X (position)')
+ha.set_ylabel('t (time)')
+ha.set_zlabel('U value')
+
 
 plt.show()
