@@ -607,12 +607,19 @@ my_TriSolve(braid_App       app,
     if(uleft!=NULL){
       apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
     }
+    else{
+      vec_scale(mspace,0.0,utmp);
+    }
     vec_axpy(mspace, -1.0, utmp, dW);
 
     vec_copy(mspace, r1, utmp);
     apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
     apply_B(dt,mspace,nu,utmp,storage1);
-    vec_axpy(mspace, g(dt,dx), utmp, dW);
+    if(uleft!=NULL){
+      vec_axpy(mspace, g(dt,dx), utmp, dW);
+    }else{
+      vec_axpy(mspace, 1.0, utmp, dW);
+    }
 
     vec_copy(mspace, r1, utmp);
     apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
