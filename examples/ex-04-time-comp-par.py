@@ -47,7 +47,7 @@ mpl.plot(ntime, advec_diff_imp[4], '--', lw = 2)
 mpl.plot(ntime, advec_diff_imp[5], '-.', lw = 2)
 mpl.xlabel('Number of time steps')
 mpl.ylabel('Run Time (s)')
-mpl.title('Run times for Quadratic Optimal Control Problem ($\\alpha=0.1$)')
+mpl.title('Run times for Quadratic Optimal Control Problem ($\gamma=0.005$)')
 mpl.legend(['1 Processor', '2 Processors', '4 Processors', '6 Processors', '8 Processors', '10 Processors'])
 
 mpl.show()

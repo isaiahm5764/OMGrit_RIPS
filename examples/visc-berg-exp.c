@@ -482,12 +482,14 @@ my_TriSolve(braid_App       app,
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
 
+   //Below relaxation is most certainly wrong
+   double th = alpha*dx/dt;
    rtmp = (u->values);
-   vec_scale(mspace, -1.0*dt*dx, rtmp);
-   apply_PhiInv(dt, dx, nu, mspace, rtmp, l, a);
-   apply_PhiAdjointInv(dt, dx, nu, mspace, rtmp, l, a);
-   vec_scale(mspace, .5, rtmp);
-
+   rtmp[0] = -rtmp[0]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(2*utmp[1]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[0]*utmp[0] - 2*(utmp[2]*utmp[2])) );
+   for(int i=1; i<mspace-1; i++){
+    rtmp[i] = -rtmp[i]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[i-1]+2*utmp[i+1]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[i-1]*utmp[i-1]) +12*utmp[i]*utmp[i] - 2*(utmp[i+1]*utmp[i+1])) );
+   }
+   rtmp[mspace-1]=-rtmp[mspace-1]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[mspace-2]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-3]*utmp[mspace-2]) + 12*utmp[0]*utmp[0]) );
 
    /* Complete residual update */
    vec_axpy(mspace, 1.0, utmp, (u->values));

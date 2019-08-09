@@ -8,7 +8,7 @@ for line in lines:
     line = line[6:]
     split = line.split(',')
 mspace=len(split)
-nsteps=len(lines)*8+1 +8
+nsteps=len(lines)+1 
 #create the t mesh
 tmesh = linspace(0,1.0,nsteps)
 tmesh_state = linspace(0,1.0,nsteps+1)
@@ -31,7 +31,7 @@ state_vec[0,mspace+1] = 0
 for thing in split:
     state_vec[0,count2]=float(split[count2-1])
     count2+=1
-for step in range(0,8):
+for step in range(0,1):
     fname = file_stem  + "u." + "%03d"%step
     fname1 = file_stem + "w."  + "%03d"%step
     fname2 = file_stem + "v."  + "%03d"%step
