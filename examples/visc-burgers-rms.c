@@ -222,7 +222,7 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    }
 
    /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/a[M-1];
+   r[M-1]=w[M-1]/ai[M-1];
    for (int i = M-2; i >= 0; i--)
    {
       r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
@@ -236,7 +236,20 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    free(bi);
 }
 
-
+void
+apply_C(double dt, double dx, double nu, int M, double *w, double *r)
+{  
+   double *rold;
+   vec_create(M, &rold);
+   vec_copy(M, r, rold);
+   r[0]=dx*dt*rold[0]+g(dt,dx)*(w[0]-w[1])*rold[1];
+   r[M-1]=g(dt,dx)*(w[M-2]-w[M-1])*rold[M-2]+dx*dt*rold[M-1];
+   for(int i = 1; i <= M-2; i++)
+   {
+      r[i]=g(dt,dx)*(w[i-1]-w[i])*rold[i-1]+dx*dt*rold[i]+g(dt,dx)*(w[i]-w[i+1])*rold[i+1];
+   }
+   vec_destroy(rold);
+}
 
 /* This is the application of A inverse*/
 
