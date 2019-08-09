@@ -349,53 +349,6 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 
 /*------------------------------------*/
 
-void
-apply_Uinv(double dt, double dx, int M, double *u)
-{
-   for (int i = 0; i <= M-1; i++)
-    {
-       u[i] /= dx*dt;
-    }
-}
-
-/*------------------------------------*/
-
-void
-apply_Vinv(double dt, double dx, double alpha, int M, double *v)
-{
-   for (int i = 0; i <= M-1; i++)
-   {
-      v[i] /= alpha*dx*dt;
-   }
-   
-}
-
-/*------------------------------------*/
-
-void
-apply_D(double dt, double dx, double nu, int M, double *v)
-{
-   //add all arguments to apply_Phi below based on what Isaiah does
-   /* apply_Phi(dt, dx, nu, M, v, l, a); */
-    for (int i = 0; i <= M-1; i++)
-    {
-       v[i] *= dt;
-    }
-}
-
-/*------------------------------------*/
-
-void
-apply_DAdjoint(double dt, double dx, double nu, int M, double *v)
-{
-   //add all arguments to apply_PhiAdjoing based on what Isaiah does
-   /* apply_PhiAdjoint(dt, dx, nu, M, v, l, a); */
-    for (int i = 0; i <= M-1; i++)
-    {
-       v[i] *= dt;
-    }
-}
-
 //applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
 void 
 apply_B(double dt, int mspace, double nu, double *u, double *uleft){
@@ -652,16 +605,13 @@ my_TriSolve(braid_App       app,
    /*solve for deltaW*/
 
     vec_copy(mspace, r4, utmp);
-<<<<<<< HEAD
     if(uleft!=NULL){
       apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
     }
     else{
       vec_scale(mspace,0.0,utmp);
     }
-=======
-    apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
->>>>>>> 4c2cf2b4542503b45ce6232f46f4f8e53b6fbd05
+
     vec_axpy(mspace, -1.0, utmp, dW);
 
     vec_copy(mspace, r1, utmp);
@@ -683,17 +633,24 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-    apply_B_inverse(dt,dx,nu,mspace,storage1);
+     apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+    apply_C(dt,dx,nu,mspace,storage3,dW);
+    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
 
     //update dU and dV based on dW
     //dV
-    vec_axpy(mspace, 1.0/(alpha*dx*dt), u->values[1], dV);
-    vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
+    vec_copy(mspace, r2, dV);
+    vec_axpy(mspace, dt, dW, dV);
+    vec_scale(mspace, 1/(alpha*dx*dt), dV);
     //dU
-    vec_axpy(mspace, 1.0/(dx*dt), u->values[0], dU);
-    vec_copy(mspace, dW, utmp);
+    vec_copy(mspace,r1,dU);
+    vec_copy(mspace,dW,utmp);
+    apply_B(dt,mspace,nu,utmp,storage1);
+    vec_axpy(mspace,-g(dt,dx),utmp,dU);
+    vec_copy(mspace,dW,utmp);
     apply_Aadjoint(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
+    vec_axpy(mspace,-1.0, utmp,dU);
+    apply_C_inverse(dt,dx,nu,mspace,storage3,dU);
 
 
    /* Complete update of solution */
