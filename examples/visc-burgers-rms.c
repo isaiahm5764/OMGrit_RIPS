@@ -352,12 +352,15 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 //applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
 void 
 apply_B(double dt, int mspace, double nu, double *u, double *uleft){
-  u[0] = uleft[1] * u[0]  -uleft[1] * u[1];
+  double *tmp;
+  vec_create(mspace, &tmp);
+  vec_copy(mspace, u, tmp);
+  u[0] = uleft[1] * tmp[0]  -uleft[1] * tmp[1];
   for(int i=1; i<mspace-1; i++)
   {
-    u[i] = uleft[i-1]*u[i-1] + u[i] * (uleft[i+1] - uleft[i-1])  -uleft[i+1]*u[i+1];
+    u[i] = uleft[i-1]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  -uleft[i+1]*tmp[i+1];
   }
-  u[mspace-1] = uleft[mspace-2] * u[mspace-2] + -uleft[mspace-2] * u[mspace-1];
+  u[mspace-1] = uleft[mspace-2] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
 }
 
 void 
@@ -641,7 +644,7 @@ my_TriSolve(braid_App       app,
     //dV
     vec_copy(mspace, r2, dV);
     vec_axpy(mspace, dt, dW, dV);
-    vec_scale(mspace, 1/(alpha*dx*dt), dV);
+    vec_scale(mspace, 1.0/(alpha*dx*dt), dV);
     //dU
     vec_copy(mspace,r1,dU);
     vec_copy(mspace,dW,utmp);
