@@ -965,14 +965,21 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
       }
+<<<<<<< HEAD
+=======
       
       
+>>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
          time = (double)(end-start)/CLOCKS_PER_SEC;
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
             FILE   *file;
+<<<<<<< HEAD
+            sprintf(filename, "%s.%d.%d.%d", "out/advec-diff-imp.time", ntime,1,mspace);
+=======
             sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 6);
+>>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
             file = fopen(filename, "w");
             fprintf(file, "%f", time);
             fflush(file);

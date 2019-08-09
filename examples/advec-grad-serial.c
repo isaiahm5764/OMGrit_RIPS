@@ -537,7 +537,7 @@ int main (int argc, char *argv[])
    {
       char    filename[255];
       FILE   *file;
-      sprintf(filename, "%s.%d", "out/advec-grad-serial.time", ntime);
+      sprintf(filename, "%s.%d.%d", "out/advec-grad-serial.time", ntime,mspace);
       file = fopen(filename, "w");
       fprintf(file, "%f", time);
       fflush(file);

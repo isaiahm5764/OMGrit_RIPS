@@ -623,7 +623,7 @@ my_TriSolve(braid_App       app,
     if(uleft!=NULL){
       vec_axpy(mspace, g(dt,dx), utmp, dW);
     }else{
-      vec_axpy(mspace, 1.0, utmp, dW);
+      vec_axpy(mspace, g(dt,dx), utmp, dW);
     }
 
     vec_copy(mspace, r1, utmp);

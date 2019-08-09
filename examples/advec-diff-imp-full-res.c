@@ -1130,7 +1130,7 @@ main(int argc, char *argv[])
 
    /**********************PRINT TIME OUT**********************/
    {
-      sprintf(filename, "%s.%d", "out/advec-diff-imp-full-res.time", maxiter);
+      sprintf(filename, "%s.%d.%d", "out/advec-diff-imp-full-res.time", maxiter,1);
       file = fopen(filename, "w");
       fprintf(file, "%f", time);
       fflush(file);
