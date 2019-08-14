@@ -154,12 +154,12 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
 
    for(int i=1; i<M-1; i++){
-      bi[i-1] = -b(dt,dx,nu)+g(dt,dx)*u[i-1];
-      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i])/ai[i-1];
+      bi[i-1] = -b(dt,dx,nu)-g(dt,dx)*u[i];
+      li[i-1] = (-b(dt,dx,nu)+g(dt,dx)*u[i-1])/ai[i-1];
       ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
    }
-   bi[M-2] = -b(dt,dx,nu)+g(dt,dx)*u[M-2];
-   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-1])/ai[M-2];
+   bi[M-2] = -b(dt,dx,nu)-g(dt,dx)*u[M-1];
+   li[M-2] = (-b(dt,dx,nu)+g(dt,dx)*u[M-2])/ai[M-2];
    ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
 
 
@@ -188,9 +188,6 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    free(ai);
    free(li);
    free(bi);
-
-
-
 }
 
 void
