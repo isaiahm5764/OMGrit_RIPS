@@ -188,9 +188,6 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    free(ai);
    free(li);
    free(bi);
-
-
-
 }
 
 void
