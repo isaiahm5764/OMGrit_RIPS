@@ -199,7 +199,7 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    double *bi = (double*) malloc( (M-1)*sizeof(double) );
    
    ai[0] = dx*dt;
-   for(int i=1; i<M-1; i++){
+   for(int i=1; i<M; i++){
       bi[i-1] = g(dt,dx)*(u[i-1]-u[i]);
       li[i-1] = g(dt,dx)*(u[i-1]-u[i])/ai[i-1];
       ai[i] = dx*dt-g(dt,dx)*g(dt,dx)*(u[i-1]-u[i])*(u[i-1]-u[i])/ai[i-1];
