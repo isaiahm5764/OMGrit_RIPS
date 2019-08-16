@@ -574,11 +574,8 @@ main(int argc, char *argv[])
    braid_Core  core;
    my_App     *app;
          
-<<<<<<< HEAD
-   double      tstart, tstop, dt, start, end; 
-=======
    double      tstart, tstop, dt, start, end, time; 
->>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
+
    int         rank, ntime, arg_index;
    double      gamma;
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
@@ -723,10 +720,8 @@ main(int argc, char *argv[])
    start=clock();
    braid_Drive(core);
    end=clock();
-<<<<<<< HEAD
-   double time = (double)(end-start)/CLOCKS_PER_SEC;
-=======
->>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
+
+   time = (double)(end-start)/CLOCKS_PER_SEC;
 
    if (access_level > 0)
    {
@@ -751,18 +746,7 @@ main(int argc, char *argv[])
       }
 
       time = (double)(end-start)/CLOCKS_PER_SEC;
-<<<<<<< HEAD
-      printf("Total Run Time: %f s \n", time);
-      {
-         char    filename[255];
-         FILE   *file;
-         sprintf(filename, "%s.%d.%d", "out/ex-04-omgrit-time", ntime,8);
-         file = fopen(filename, "w");
-         fprintf(file, "%f", time);
-         fflush(file);
-         fclose(file);
-      }      
-=======
+
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
@@ -773,7 +757,7 @@ main(int argc, char *argv[])
             fflush(file);
             fclose(file);
          }
->>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
+
 
       /* Compute state u from adjoint w and print to file */
       /* ZTODO: This requires communication to do correctly */

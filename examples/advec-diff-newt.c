@@ -340,86 +340,33 @@ my_TriResidual(braid_App       app,
    vec_create(mspace, &utmp);
    vec_create(mspace, &utmp2);
 
-   /* Compute residual on second row*/
-
-   vec_copy(mspace, (r->values[0]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
-
-   vec_scale(mspace,dx*dt,utmp);
-   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,1.0,utmp2,utmp);
-   vec_axpy(mspace,-dx*dt,u0,utmp);
-  
-  if (uright != NULL)
-   {
-   vec_copy(mspace, (uright->values[2]), utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
+   /* Compute residual on first row*/
+   vec_copy(mspace, r->values[0], rtmp);
+   vec_scale(mspace, dx*dt, rtmp);
+   vec_copy(mspace, r->values[2], utmp);
+   apply_Aadjoint(dt,dx,nu,mspace,utmp);
+   vec_axpy(mspace, 1.0, utmp, rtmp);
+   vec_axpy(mspace, -dx*dt, u0, rtmp);
+   if(uright!=NULL){
+    vec_axpy(mspace, -1.0, uright->values[2], rtmp);
    }
 
-  vec_copy(mspace, utmp, rtmp);
+   /* Compute residual on second row */
+   vec_copy(mspace, r->values[1], rtmp2);
+   vec_scale(mspace, alpha*dx*dt, rtmp2);
+   vec_axpy(mspace, -dt, r->values[2], rtmp2);
 
-  /* Compute residual on third row*/
-
-   vec_copy(mspace, (r->values[1]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
-
-   vec_scale(mspace,alpha*dx*dt,utmp);
-   apply_D(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-
-   vec_copy(mspace, utmp, rtmp2);
-   
-
-
-/* Compute residual on fourth row*/
-
-   vec_copy(mspace, (r->values[0]), utmp);
-   vec_copy(mspace, (r->values[1]), utmp2);
-
-   apply_A(dt, dx, nu, mspace, utmp);
-   apply_D(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-
-   if (uleft != NULL)
-   {
-   vec_copy(mspace, (uleft->values[0]), utmp2);   
-   vec_axpy(mspace,-1.0,utmp2,utmp);
+   /* Compute residual on third row */
+   vec_copy(mspace, r->values[0], utmp);
+   apply_A(dt,dx,nu,mspace,utmp);
+   vec_copy(mspace, utmp, rtmp3);
+   vec_axpy(mspace, -dt, r->values[1], rtmp3);
+   if(uleft!=NULL){
+    vec_axpy(mspace, -1.0, uleft->values[0], rtmp3);
+   }else{
+    vec_axpy(mspace, -1.0, u0, rtmp3);
    }
 
-  else{
-   vec_axpy(mspace,-1.0,u0,utmp);
-  }
-
-  vec_copy(mspace, utmp, rtmp3);
-
-
-
-  
- /* Compute residual on first row*/
-
-    if (uleft != NULL)
-   {
-
-   vec_copy(mspace, (uleft->values[0]), utmp);
-   vec_copy(mspace, (r->values[2]), utmp2);
-
-   vec_scale(mspace,dx*dt,utmp);
-   vec_axpy(mspace,-1.0,utmp2,utmp);
-   vec_axpy(mspace,-dx*dt,u0,utmp);
-  
-   vec_copy(mspace, (uleft->values[2]), utmp2);
-   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
-   vec_axpy(mspace,1.0,utmp2,utmp);
-   }
-
-  else{
-   /* NEEDS TO BE DEALT WITH */
-    
-    vec_scale(mspace,0.0,utmp);
-
-  }
-
-  vec_copy(mspace, utmp, rtmp4);
 
   if (f != NULL)
    {
@@ -519,31 +466,26 @@ my_TriSolve(braid_App       app,
 
    /*solve for deltaW*/
 
-   if(uleft!=NULL){
-    vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
-  }
-
-
-   apply_A(dt,dx,nu,mspace,r1);
-   vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
-
-   vec_axpy(mspace, -1.0/(dx*alpha), r2, dW);
-   vec_axpy(mspace, -1.0, r3, dW);
+    vec_axpy(mspace, -dt/alpha, r2, dW);
+    vec_axpy(mspace, -dx*dt, r3, dW);
+    vec_copy(mspace, r1, utmp);
+    apply_A(dt,dx,nu,mspace,utmp);
+    vec_axpy(mspace,1.0,utmp,dW);
 
    //apply c_tilde inverse
-    vec_scale(mspace, dx*dt*.5, dW);
+    vec_scale(mspace, dt, dW);
     apply_Phi(dt,dx,nu,mspace,dW,li,ai);
     apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
 
     //update dU and dV based on dW
     //dV
-    vec_axpy(mspace, 1.0/(alpha*dx*dt), u->values[1], dV);
+    vec_axpy(mspace, 1.0/(alpha*dx*dt),r2,dV );
     vec_axpy(mspace, 1.0/(alpha*dx), dW, dV);
     //dU
-    vec_axpy(mspace, 1.0/(dx*dt), u->values[0], dU);
-    vec_copy(mspace, dW, utmp);
-    apply_Aadjoint(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, -1.0/(dx*dt), utmp, dU);
+    vec_axpy(mspace, 1.0, r3, dU);
+    vec_axpy(mspace, 1.0/(alpha*dx), r2, dU);
+    vec_axpy(mspace, dt/(alpha*dx), dW, dU);
+    apply_Phi(dt,dx,nu,mspace,dU,li,ai);
 
 
    /* Complete update of solution */
@@ -681,8 +623,8 @@ my_SpatialNorm(braid_App     app,
    int mspace = (app->mspace);
    for (i = 0; i <= mspace-1; i++)
    {
-      //dot += (u->values)[0][i]*(u->values)[0][i];
-      //dot += (u->values)[1][i]*(u->values)[1][i];
+      // dot += (u->values)[0][i]*(u->values)[0][i];
+      // dot += (u->values)[1][i]*(u->values)[1][i];
       dot += (u->values)[2][i]*(u->values)[2][i];
    }
    *norm_ptr = sqrt(dot);
@@ -1015,7 +957,7 @@ main(int argc, char *argv[])
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
 
-   dx = 1/((double)(mspace+1));;
+   dx = 1/((double)(mspace+1));
    
 
    if (access_level > 0)

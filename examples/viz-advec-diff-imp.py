@@ -11,63 +11,17 @@ mspace=len(split)
 nsteps=len(lines)+1 
 #create the t mesh
 tmesh = linspace(0,1.0,nsteps)
-tmesh_state = linspace(0,1.0,nsteps+1)
+tmesh_state = linspace(0,1.0,nsteps)
 xmesh = linspace(0,1.0,mspace)
 xmesh_state = linspace(0,1.0,mspace+2)
 ##
 current_rank = 0
 
 file_stem = "out/advec-diff-imp.out."
-state_vec = empty([nsteps+1, mspace+2])
-w_vec = empty([nsteps, mspace])
-v_vec = empty([nsteps, mspace])
+state_vec = zeros([nsteps, mspace+2])
+w_vec = zeros([nsteps, mspace])
+v_vec = zeros([nsteps, mspace])
 # We don't know the MPI ranks ahead of time that generated the files, so we guess :-)
-with open('out/advec-diff-imp.out.u0.000') as f:
-    lines = f.readlines()
-split = lines[0].split(',')
-count2=1
-state_vec[0,0] = 0
-state_vec[0,mspace+1] = 0
-for thing in split:
-    state_vec[0,count2]=float(split[count2-1])
-    count2+=1
-for step in range(0,1):
-    fname = file_stem  + "u." + "%03d"%step
-    fname1 = file_stem + "w."  + "%03d"%step
-    fname2 = file_stem + "v."  + "%03d"%step
-    with open(fname) as f:
-        lines = f.readlines()
-    for line in lines:
-        index = int(line[:5])
-        line = line[6:]
-        split = line.split(',')
-        state_vec[index,0] = 0
-        state_vec[index,mspace+1] = 0
-        count2=1
-        for thing in split:
-            state_vec[index,count2] = float(split[count2-1])
-            count2 +=1
-    with open(fname1) as f:
-        lines = f.readlines()
-    for line in lines:
-        index = int(line[:5])
-        line = line[6:]
-        split = line.split(',')
-        count2=0
-        for thing in split:
-            w_vec[index,count2] = float(split[count2])
-            count2 +=1
-    with open(fname2) as f:
-        lines = f.readlines()
-    for line in lines:
-        index = int(line[:5])
-        line = line[6:]
-        split = line.split(',')
-        count2=0
-        for thing in split:
-            v_vec[index,count2] = float(split[count2])
-            count2 +=1
-
 # with open('out/advec-diff-imp.out.u0.000') as f:
 #     lines = f.readlines()
 # split = lines[0].split(',')
@@ -77,45 +31,91 @@ for step in range(0,1):
 # for thing in split:
 #     state_vec[0,count2]=float(split[count2-1])
 #     count2+=1
+# for step in range(0,1):
+#     fname = file_stem  + "u." + "%03d"%step
+#     fname1 = file_stem + "w."  + "%03d"%step
+#     fname2 = file_stem + "v."  + "%03d"%step
+#     with open(fname) as f:
+#         lines = f.readlines()
+#     for line in lines:
+#         index = int(line[:5])
+#         line = line[6:]
+#         split = line.split(',')
+#         state_vec[index,0] = 0
+#         state_vec[index,mspace+1] = 0
+#         count2=1
+#         for thing in split:
+#             state_vec[index,count2] = float(split[count2-1])
+#             count2 +=1
+#     with open(fname1) as f:
+#         lines = f.readlines()
+#     for line in lines:
+#         index = int(line[:5])
+#         line = line[6:]
+#         split = line.split(',')
+#         count2=0
+#         for thing in split:
+#             w_vec[index,count2] = float(split[count2])
+#             count2 +=1
+#     with open(fname2) as f:
+#         lines = f.readlines()
+#     for line in lines:
+#         index = int(line[:5])
+#         line = line[6:]
+#         split = line.split(',')
+#         count2=0
+#         for thing in split:
+#             v_vec[index,count2] = float(split[count2])
+#             count2 +=1
 
-# with open('out/advec-diff-imp.out.u.000') as f:
-#     lines = f.readlines()
-# count = 1
-# for line in lines:
-#     line = line[6:]
-#     split = line.split(',')
-#     state_vec[count,0] = 0
-#     state_vec[count,mspace+1] = 0
-#     count2 = 1
-#     for thing in split:
-#         state_vec[count,count2] = float(split[count2-1])
-#         count2+=1
-#     count+=1
+with open('out/advec-diff-imp.out.u0.000') as f:
+    lines = f.readlines()
+split = lines[0].split(',')
+count2=1
+state_vec[0,0] = 0
+state_vec[0,mspace+1] = 0
+for thing in split:
+    state_vec[0,count2]=float(split[count2-1])
+    count2+=1
 
-# print(state_vec)
-# with open('out/advec-diff-imp.out.w.000') as f:
-#     lines = f.readlines()
-# count = 0
-# for line in lines:
-#     line = line[6:]
-#     split = line.split(',')
-#     count2 = 0
-#     for thing in split:
-#         w_vec[count,count2] = float(split[count2])
-#         count2+=1
-#     count+=1
+with open('out/advec-diff-imp.out.u.000') as f:
+    lines = f.readlines()
+count = 1
+for line in lines:
+    line = line[6:]
+    split = line.split(',')
+    state_vec[count,0] = 0
+    state_vec[count,mspace+1] = 0
+    count2 = 1
+    for thing in split:
+        state_vec[count,count2] = float(split[count2-1])
+        count2+=1
+    count+=1
 
-# with open('out/advec-diff-imp.out.v.000') as f:
-#     lines = f.readlines()
-# count = 0
-# for line in lines:
-#     line = line[6:]
-#     split = line.split(',')
-#     count2 = 0
-#     for thing in split:
-#         v_vec[count,count2] = float(split[count2])
-#         count2+=1
-#     count+=1
+print(state_vec)
+with open('out/advec-diff-imp.out.w.000') as f:
+    lines = f.readlines()
+count = 0
+for line in lines:
+    line = line[6:]
+    split = line.split(',')
+    count2 = 0
+    for thing in split:
+        w_vec[count,count2] = float(split[count2])
+        count2+=1
+    count+=1
+
+with open('out/advec-diff-imp.out.v.000') as f:
+    lines = f.readlines()
+count = 0
+for line in lines:
+    line = line[6:]
+    split = line.split(',')
+    count2 = 0
+    for thing in split:
+        v_vec[count,count2] = float(split[count2])
+        count2+=1
+    count+=1
 
 # mpl.figure(1)
 # for x in range(0,mspace-1):

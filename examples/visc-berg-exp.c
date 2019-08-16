@@ -483,14 +483,29 @@ my_TriSolve(braid_App       app,
 
 
    //Below relaxation is most certainly wrong
-   double th = alpha*dx/dt;
-   rtmp = (u->values);
-   rtmp[0] = -rtmp[0]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(2*utmp[1]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[0]*utmp[0] - 2*(utmp[2]*utmp[2])) );
-   for(int i=1; i<mspace-1; i++){
-    rtmp[i] = -rtmp[i]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[i-1]+2*utmp[i+1]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[i-1]*utmp[i-1]) +12*utmp[i]*utmp[i] - 2*(utmp[i+1]*utmp[i+1])) );
-   }
-   rtmp[mspace-1]=-rtmp[mspace-1]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[mspace-2]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-3]*utmp[mspace-2]) + 12*utmp[0]*utmp[0]) );
+   if(uleft!=NULL){
+     double th = alpha*dx/dt;
+     rtmp = (u->values);
+     rtmp[0] = -rtmp[0]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(2*utmp[1]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[0]*utmp[0] - 2*(utmp[2]*utmp[2])) );
+     rtmp[1] = -rtmp[1]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(2*utmp[2]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[1]*utmp[1] - 2*(utmp[3]*utmp[3])) );
+     for(int i=2; i<mspace-2; i++){
+      rtmp[i] = -rtmp[i]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[i-1]+2*utmp[i+1]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[i-2]*utmp[i-2]) +12*utmp[i]*utmp[i] - 2*(utmp[i+2]*utmp[i+2])) );
+     }
+     rtmp[mspace-1]=-rtmp[mspace-1]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[mspace-2]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-3]*utmp[mspace-2]) + 12*utmp[mspace-1]*utmp[mspace-1]) );
+     rtmp[mspace-2]=-rtmp[mspace-2]/( dx*dt+ th*(2*b(dt,dx,nu)*b(dt,dx,nu)+(1-2*b(dt,dx,nu))*(1-2*b(dt,dx,nu)) +1 ) -th*g(dt,dx)*(-2*utmp[mspace-3]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-4]*utmp[mspace-3]) + 12*utmp[mspace-2]*utmp[mspace-2]) );
+  }
+  else{
+    double th = alpha*dx/dt;
+     rtmp = (u->values);
+     rtmp[0] = -rtmp[0]/( dx*dt+ th-th*g(dt,dx)*(2*utmp[1]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[0]*utmp[0] - 2*(utmp[2]*utmp[2])) );
+     rtmp[1] = -rtmp[1]/( dx*dt+ th -th*g(dt,dx)*(2*utmp[2]) + th*g(dt,dx)*g(dt,dx)*(12*utmp[1]*utmp[1] - 2*(utmp[3]*utmp[3])) );
+     for(int i=2; i<mspace-2; i++){
+      rtmp[i] = -rtmp[i]/( dx*dt+ th -th*g(dt,dx)*(-2*utmp[i-1]+2*utmp[i+1]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[i-2]*utmp[i-2]) +12*utmp[i]*utmp[i] - 2*(utmp[i+2]*utmp[i+2])) );
+     }
+     rtmp[mspace-1]=-rtmp[mspace-1]/( dx*dt+ th -th*g(dt,dx)*(-2*utmp[mspace-2]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-3]*utmp[mspace-2]) + 12*utmp[mspace-1]*utmp[mspace-1]) );
+     rtmp[mspace-2]=-rtmp[mspace-2]/( dx*dt+ th -th*g(dt,dx)*(-2*utmp[mspace-3]) + th*g(dt,dx)*g(dt,dx)*(-(2*utmp[mspace-4]*utmp[mspace-3]) + 12*utmp[mspace-2]*utmp[mspace-2]) );
 
+  }
    /* Complete residual update */
    vec_axpy(mspace, 1.0, utmp, (u->values));
 

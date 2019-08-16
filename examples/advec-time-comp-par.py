@@ -22,32 +22,24 @@ from os import sys
 #
 ##
 
-ntime = [64, 128, 192, 256, 384, 512, 768, 1024]
 proc = [1,2,4,6,8,10]
 #ntime = [64, 128, 256, 512]
-advec_diff_imp = zeros([len(proc),len(ntime)])
+advec_diff_imp = zeros(len(proc))
 
 pcount=0
 for p in proc:
 	count=0
-	for n in ntime:
-	    with open('out/advec-diff-imp.time.' + str(n) + '.' + str(p)) as f:
-	        lines = f.readlines()
-	    advec_diff_imp[pcount,count] = lines[0]
-	    count+=1
+	with open('out/advec-diff-imp.time.' + str(2048) + '.' + str(p)) as f:
+		lines = f.readlines()
+	advec_diff_imp[pcount] = lines[0]
 	pcount+=1
 
 
 mpl.figure(1)
-mpl.plot(ntime, advec_diff_imp[0], '-')
-mpl.plot(ntime, advec_diff_imp[1], '--')
-mpl.plot(ntime, advec_diff_imp[2], '-.')
-mpl.plot(ntime, advec_diff_imp[3], ':')
-mpl.plot(ntime, advec_diff_imp[4], '--', lw = 2)
-mpl.plot(ntime, advec_diff_imp[5], '-.', lw = 2)
-mpl.xlabel('Number of time steps')
+mpl.plot(proc, advec_diff_imp, '-')
+
+mpl.xlabel('Number of processors')
 mpl.ylabel('Run Time (s)')
-mpl.title('Run times for Advection-Diffusion Model Problem ($\\nu=0.1$, 16 space points)')
-mpl.legend(['1 Processor', '2 Processors', '4 Processors', '6 Processors', '8 Processors', '10 Processors'])
+mpl.title('Run times for Advection-Diffusion Model Problem ($\\nu=0.1$)\n2048 time points, 40 space points')
 
 mpl.show()
