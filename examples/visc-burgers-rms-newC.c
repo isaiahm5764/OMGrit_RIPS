@@ -629,9 +629,10 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
-    apply_C(dt,dx,nu,mspace,storage3,dW);
-    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+  
+    // apply_C(dt,dx,nu,mspace,storage3,dW);
+    // vec_scale(mspace,0.5,dW);
+    
 
     //update dU and dV based on dW
     //dV
