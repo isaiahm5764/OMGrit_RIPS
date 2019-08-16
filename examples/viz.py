@@ -164,7 +164,6 @@ count=1
 state_vec[0,0] = left_bound
 state_vec[0,mspace+1] = right_bound
 for thing in split:
-    print thing
     state_vec[0,count]=float(thing)
     count+=1
 
