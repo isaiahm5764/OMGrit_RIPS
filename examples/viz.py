@@ -3,7 +3,7 @@ from matplotlib import pyplot as mpl
 from os import sys
 
 ###### Helper Functions ######
-def retrieve_data(var, vec, step):
+def retrieve_data(file_stem, var, vec, step):
     """
     Extracts solution data from desired files
     
@@ -169,9 +169,9 @@ for thing in split:
 
 # Retrieves solutions of u, v, and w for each processor
 for step in range(0,num_procs):
-    state_vec = retrieve_data('u', state_vec, step)
-    control_vec = retrieve_data('v', control_vec, step)
-    adjoint_vec = retrieve_data('w', adjoint_vec, step)
+    state_vec = retrieve_data(file_stem, 'u', state_vec, step)
+    control_vec = retrieve_data(file_stem, 'v', control_vec, step)
+    adjoint_vec = retrieve_data(file_stem, 'w', adjoint_vec, step)
 
 
 import numpy
