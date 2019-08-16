@@ -4,7 +4,7 @@ from os import sys
 #get nsteps for time from the u file
 
 #change here to figure how many processors were used
-num_proc = 8
+num_proc = 1
 
 with open('out/advec-diff-rms.out.w.000') as f:
         lines = f.readlines()
@@ -12,15 +12,15 @@ for line in lines:
     line = line[6:]
     split = line.split(',')
 mspace=len(split)
-nsteps=len(lines)*num_proc
+nsteps=len(lines)+1
 #create the t mesh
 tmesh = linspace(0,1.0,nsteps)
-tmesh_state = linspace(0,1.0,nsteps+1)
+tmesh_state = linspace(0,1.0,nsteps)
 xmesh = linspace(0,1.0,mspace)
 xmesh_state = linspace(0,1.0,mspace+2)
 ##
 current_rank = 0
-state_vec = empty([nsteps+1, mspace+2])
+state_vec = empty([nsteps, mspace+2])
 w_vec = empty([nsteps, mspace])
 v_vec = empty([nsteps, mspace])
 
@@ -69,6 +69,8 @@ for proc in range(0,num_proc,1):
     for line in lines:
         line = line[6:]
         split = line.split(',')
+        state_vec[count,0] = 0
+        state_vec[count,mspace+1] = 0
         count2 = 1
         for thing in split:
             state_vec[count,count2] = float(split[count2-1])

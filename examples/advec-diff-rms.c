@@ -414,7 +414,8 @@ my_TriResidual(braid_App       app,
 
   else{
    /* NEEDS TO BE DEALT WITH */
-    vec_scale(mspace, 0.0, utmp);
+    
+    vec_scale(mspace,0.0,utmp);
 
   }
 
@@ -518,7 +519,9 @@ my_TriSolve(braid_App       app,
 
    /*solve for deltaW*/
 
+   if(uleft!=NULL){
     vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
+  }
 
 
    apply_A(dt,dx,nu,mspace,r1);
@@ -678,8 +681,8 @@ my_SpatialNorm(braid_App     app,
    int mspace = (app->mspace);
    for (i = 0; i <= mspace-1; i++)
    {
-      dot += (u->values)[0][i]*(u->values)[0][i];
-      dot += (u->values)[1][i]*(u->values)[1][i];
+      //dot += (u->values)[0][i]*(u->values)[0][i];
+      //dot += (u->values)[1][i]*(u->values)[1][i];
       dot += (u->values)[2][i]*(u->values)[2][i];
    }
    *norm_ptr = sqrt(dot);

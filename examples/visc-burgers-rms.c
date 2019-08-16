@@ -554,7 +554,7 @@ my_TriSolve(braid_App       app,
    double *ai = (app->ai);
    double alpha = (app->alpha);
 
-   double *dW, *dU, *dV, *storage1, *storage2, *storage3;
+   double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageW;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
@@ -579,9 +579,13 @@ my_TriSolve(braid_App       app,
    vec_create(mspace, &storage1);
    vec_create(mspace, &storage2);
    vec_create(mspace, &storage3);
+   vec_create(mspace, &storageW);
    vec_copy(mspace, (u->values)[0], storage1);
    vec_copy(mspace, (u->values)[1], storage2);
    vec_copy(mspace, (u->values)[2], storage3);
+   if(uleft!=NULL){
+   vec_copy(mspace, (uleft->values)[2], storageW);
+    }
    /* Create temporary vector */
    vec_create(mspace, &utmp);
    vec_create(mspace, &r1);
@@ -602,7 +606,7 @@ my_TriSolve(braid_App       app,
 
     vec_copy(mspace, r4, utmp);
     if(uleft!=NULL){
-      apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
+      apply_C_inverse(dt,dx,nu,mspace,storageW,utmp);
     }
     else{
       vec_scale(mspace,0.0,utmp);
@@ -616,7 +620,7 @@ my_TriSolve(braid_App       app,
     if(uleft!=NULL){
       vec_axpy(mspace, g(dt,dx), utmp, dW);
     }else{
-      vec_axpy(mspace, g(dt,dx), utmp, dW);
+      vec_axpy(mspace, 1.0, utmp, dW);
     }
 
     vec_copy(mspace, r1, utmp);

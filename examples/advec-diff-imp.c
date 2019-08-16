@@ -965,21 +965,15 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
       }
-<<<<<<< HEAD
-=======
-      
-      
->>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
+
          time = (double)(end-start)/CLOCKS_PER_SEC;
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
             FILE   *file;
-<<<<<<< HEAD
-            sprintf(filename, "%s.%d.%d.%d", "out/advec-diff-imp.time", ntime,1,mspace);
-=======
-            sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 6);
->>>>>>> e87f75b6eda89ee3d231f41534aa86cda8308e95
+
+            sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 8);
+
             file = fopen(filename, "w");
             fprintf(file, "%f", time);
             fflush(file);
@@ -1015,9 +1009,15 @@ main(int argc, char *argv[])
             for (j = 0; j < (app->mspace); j++)
             {
                vs[i][j] = v[j];
-               fprintf(file, "% 1.14e, ", v[j]);
+               if(j==mspace-1){
+                  fprintf(file, "% 1.14e", v[j]);
+               }
+               else{
+                  fprintf(file, "% 1.14e, ", v[j]);
+               }
             }
-            fprintf(file, "% 1.14e\n", v[(app->mspace)-1]);
+            fprintf(file, "\n");
+            
          }
          vec_destroy(v);
          fflush(file);
@@ -1051,28 +1051,44 @@ main(int argc, char *argv[])
          {
           double **w = (app->w);
           vec_copy(mspace, w[i], v);
-            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
-            apply_Vinv(dt, dx, alpha, mspace,v);
-            double *vtemp = vs[i];
-            if(i==0){
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, U0, vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
-            }
-            else{
-               vec_scale(mspace, dt, vtemp);
-               vec_axpy(mspace, 1.0, u[i-1], vtemp);
-               apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
-               vec_copy(mspace, vtemp, u[i]);
+            // apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
+            // apply_Vinv(dt, dx, alpha, mspace,v);
+            // double *vtemp = vs[i];
+            // if(i==0){
+            //    vec_scale(mspace, dt, vtemp);
+            //    vec_axpy(mspace, 1.0, U0, vtemp);
+            //    apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+            //    vec_copy(mspace, vtemp, u[i]);
+            // }
+            // else{
+            //    vec_scale(mspace, dt, vtemp);
+            //    vec_axpy(mspace, 1.0, u[i-1], vtemp);
+            //    apply_Phi(dt, dx, nu, mspace, vtemp, li, ai);
+            //    vec_copy(mspace, vtemp, u[i]);
+            // }
+            if(i!=app->npoints-1){
+              vec_copy(mspace, w[i],u[i]);
+              apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+              vec_scale(mspace,-1.0/(dx*dt),u[i]);
+              vec_axpy(mspace,1.0/(dx*dt),w[i+1],u[i]);
+              vec_axpy(mspace,1.0,U0,u[i]);
+            }else{
+              vec_copy(mspace, w[i],u[i]);
+              apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+              vec_scale(mspace,-1.0/(dx*dt),u[i]);
+              vec_axpy(mspace,1.0,U0,u[i]);
             }
 
             fprintf(file, "%05d: ", ((app->ilower)+i+1));
-            for (j = 0; j < mspace; j++)
-            {
-               fprintf(file, "% 1.14e, ", u[i][j]);
+            for (j = 0; j < mspace; j++){
+            if(j==mspace-1){
+                  fprintf(file, "% 1.14e", u[i][j]);
+               }
+               else{
+                  fprintf(file, "% 1.14e, ", u[i][j]);
+               }
             }
-            fprintf(file, "% 1.14e\n", u[i][mspace-1]);
+            fprintf(file, "\n");
          }
          fflush(file);
          fclose(file);

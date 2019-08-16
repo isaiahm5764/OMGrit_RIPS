@@ -204,7 +204,7 @@ int main (int argc, char *argv[])
       /* Design update */
       for(ts = 0; ts < ntime; ts++) 
       {
-         design[ts] -= stepsize * gradient[ts];
+         design[ts] -= (1.0/(2*gamma)) * gradient[ts];
       }
    }
 
