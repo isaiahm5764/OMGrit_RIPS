@@ -71,19 +71,18 @@ nsteps = None # added later if user does not define
 
 # User input
 arg_index = 1
-while arg_index < len(sys.argv)-1:
+while arg_index < len(sys.argv):
     if sys.argv[arg_index] == "-help":
-         print "\n"
-         print " Plots state, control, and adjoint solutions to time and 1D space dependent optimization problem \n\n"
-         print "  -file_stem <file_stem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
-         print "  -nsteps <nsteps>          : Num points in time\n"
-         print "  -start_t <start_t>        : Initial time point\n"
-         print "  -end_t <end_t>            : Final time point\n"
-         print "  -start_x <start_x>        : Initial space point\n"
-         print "  -end_x <end_x>            : Final space point\n"
-         print "  -l_bound  <l_bound>       : Value of initial space point at all times\n"
-         print "  -r_bound <r_bound>        : Value of final space point at all times\n"
-         exit()
+        print " Viz.py plots state, control, and adjoint solutions to time and 1D space dependent optimization problem \n\n"
+        print "  -file_stem <file_stem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
+        print "  -nsteps <nsteps>          : Num points in time\n"
+        print "  -start_t <start_t>        : Initial time point\n"
+        print "  -end_t <end_t>            : Final time point\n"
+        print "  -start_x <start_x>        : Initial space point\n"
+        print "  -end_x <end_x>            : Final space point\n"
+        print "  -l_bound  <l_bound>       : Value of initial space point at all times\n"
+        print "  -r_bound <r_bound>        : Value of final space point at all times\n"
+        exit()
 
     elif sys.argv[arg_index] == "-file_stem":
         arg_index += 1
