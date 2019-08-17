@@ -1,8 +1,5 @@
 /*BHEADER**********************************************************************
- * Copyright (c) 2013, Lawrence Livermore National Security, LLC. 
- * Produced at the Lawrence Livermore National Laboratory. Written by 
- * Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin 
- * Dobrev, et al. LLNL-CODE-660355. All rights reserved.
+ * Written by Isaiah Meyers, Joseph Munar, Eric Neville, Tom Overman
  * 
  * This file is part of XBraid. For support, post issues to the XBraid Github page.
  * 
@@ -50,7 +47,7 @@
 #include "braid.h"
 #include "braid_test.h"
 #define PI 3.14159265
-#define g(dt,dx) dt/(2*dx)
+#define g(dt,dx) dt/dx
 #define b(dt,dx,nu) nu*dt/(dx*dx)
 /*--------------------------------------------------------------------------
  * My App and Vector structures
@@ -65,14 +62,15 @@ typedef struct _braid_App_struct
    int      mspace;      /* Number of space points included in our state vector */
                          /* So including boundaries we have M+2 space points */
 
-   double ***w;           /* Vectors (ui, xi, wi) at each time point (each of these have their own mspace points) */
+   int      ilower;      /* Lower index for my proc */
+   int      iupper;      /* Upper index for my proc */
+   int      npoints;     /* Number of time points on my proc */
+
+   double **w;           /* Adjoint vectors at each time point on my proc */
    double *U0;
    double *ai;
    double *li;
 
-   int ilower;
-   int iupper;
-   int npoints;
 
 } my_App;
 
@@ -80,7 +78,7 @@ typedef struct _braid_App_struct
 /* Define the state vector at one time-step */
 typedef struct _braid_Vector_struct
 {
-   double **values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) for ui vi and wi*/
+   double *values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) */
 
 } my_Vector;
 
@@ -93,7 +91,6 @@ vec_create(int size, double **vec_ptr)
 {
    *vec_ptr = (double*) malloc( size*sizeof(double) );
 }
-
 
 void
 vec_destroy(double *vec)
@@ -140,162 +137,6 @@ vec_scale(int size, double alpha, double *x)
 /*--------------------------------------------------------------------------
  * KKT component routines
  *--------------------------------------------------------------------------*/
-
-/* B inverse and C inverse are actually the inverses of (A + gamma*B^n) and (dx*dt + gamma*C^n) 
- * as required in the solve */
-
-void
-apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{   
-   /* Find LU decomposition */
-   double *ai = (double*) malloc( M*sizeof(double) );
-   double *li = (double*) malloc( (M-1)*sizeof(double) );
-   double *bi = (double*) malloc( (M-1)*sizeof(double) );
-   ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
-
-   for(int i=1; i<M-1; i++){
-      bi[i-1] = -b(dt,dx,nu)-g(dt,dx)*u[i];
-      li[i-1] = (-b(dt,dx,nu)+g(dt,dx)*u[i-1])/ai[i-1];
-      ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
-   }
-   bi[M-2] = -b(dt,dx,nu)-g(dt,dx)*u[M-1];
-   li[M-2] = (-b(dt,dx,nu)+g(dt,dx)*u[M-2])/ai[M-2];
-   ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
-
-
-
-   /* Solve Lw=u (Lw=f) */
-   double *w;
-   vec_create(M, &w);
-   double *f;
-   vec_create(M, &f);
-   vec_copy(M, r, f);
-   w[0]=f[0];
-   for (int i = 1; i < M; i++)
-   {
-      w[i]=f[i]-li[i-1]*w[i-1];
-   }
-
-   /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/ai[M-1];
-   for (int i = M-2; i >= 0; i--)
-   {
-      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-   }
-
-   vec_destroy(w);
-   vec_destroy(f);
-   free(ai);
-   free(li);
-   free(bi);
-}
-
-void
-apply_B_transpose_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{   
-   /* Find LU decomposition */
-   double *ai = (double*) malloc( M*sizeof(double) );
-   double *li = (double*) malloc( (M-1)*sizeof(double) );
-   double *bi = (double*) malloc( (M-1)*sizeof(double) );
-   ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
-
-   for(int i=1; i<M-1; i++){
-      bi[i-1] = -b(dt,dx,nu)+g(dt,dx)*u[i-1];
-      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i])/ai[i-1];
-      ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
-   }
-   bi[M-2] = -b(dt,dx,nu)+g(dt,dx)*u[M-2];
-   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-1])/ai[M-2];
-   ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
-
-
-
-   /* Solve Lw=u (Lw=f) */
-   double *w;
-   vec_create(M, &w);
-   double *f;
-   vec_create(M, &f);
-   vec_copy(M, r, f);
-   w[0]=f[0];
-   for (int i = 1; i < M; i++)
-   {
-      w[i]=f[i]-li[i-1]*w[i-1];
-   }
-
-   /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/ai[M-1];
-   for (int i = M-2; i >= 0; i--)
-   {
-      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-   }
-
-   vec_destroy(w);
-   vec_destroy(f);
-   free(ai);
-   free(li);
-   free(bi);
-
-
-
-}
-
-void
-apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{  
-   /* Find LU decomposition */
-   double *ai = (double*) malloc( M*sizeof(double) );
-   double *li = (double*) malloc( (M-1)*sizeof(double) );
-   double *bi = (double*) malloc( (M-1)*sizeof(double) );
-   
-   ai[0] = dx*dt;
-   for(int i=1; i<M; i++){
-      bi[i-1] = g(dt,dx)*(u[i-1]-u[i]);
-      li[i-1] = g(dt,dx)*(u[i-1]-u[i])/ai[i-1];
-      ai[i] = dx*dt-g(dt,dx)*g(dt,dx)*(u[i-1]-u[i])*(u[i-1]-u[i])/ai[i-1];
-   }
-
-
-   /* Solve Lw=u (Lw=f) */
-   double *w;
-   vec_create(M, &w);
-   double *f;
-   vec_create(M, &f);
-   vec_copy(M, r, f);
-   w[0]=f[0];
-   for (int i = 1; i < M; i++)
-   {
-      w[i]=f[i]-li[i-1]*w[i-1];
-   }
-
-   /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/ai[M-1];
-   for (int i = M-2; i >= 0; i--)
-   {
-      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-   }
-
-
-   vec_destroy(w);
-   vec_destroy(f);
-   free(ai);
-   free(li);
-   free(bi);
-}
-
-void
-apply_C(double dt, double dx, double nu, int M, double *w, double *r)
-{  
-   double *rold;
-   vec_create(M, &rold);
-   vec_copy(M, r, rold);
-   r[0]=dx*dt*rold[0]+g(dt,dx)*(w[0]-w[1])*rold[1];
-   r[M-1]=g(dt,dx)*(w[M-2]-w[M-1])*rold[M-2]+dx*dt*rold[M-1];
-   for(int i = 1; i <= M-2; i++)
-   {
-      r[i]=g(dt,dx)*(w[i-1]-w[i])*rold[i-1]+dx*dt*rold[i]+g(dt,dx)*(w[i]-w[i+1])*rold[i+1];
-   }
-   vec_destroy(rold);
-}
 
 /* This is the application of A inverse*/
 
@@ -358,8 +199,8 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
 void
 apply_A(double dt, double dx, double nu, int M, double *u)
 {
-   double A = -b(dt,dx,nu);
-   double B = 1+2*b(dt,dx,nu);
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+g(dt,dx)+2*b(dt,dx,nu);
    double C = -b(dt,dx,nu);
    double *uold;
    vec_create(M, &uold);
@@ -378,8 +219,8 @@ apply_A(double dt, double dx, double nu, int M, double *u)
 void
 apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 {
-   double A = -b(dt,dx,nu);
-   double B = 1+2*b(dt,dx,nu);
+   double A = -g(dt,dx)-b(dt,dx,nu);
+   double B = 1+g(dt,dx)+2*b(dt,dx,nu);
    double C = -b(dt,dx,nu);
    double *uold;
    vec_create(M, &uold);
@@ -395,48 +236,47 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 
 /*------------------------------------*/
 
-//applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
-void 
-apply_B(double dt, int mspace, double nu, double *u, double *uleft){
-  double *tmp;
-  vec_create(mspace, &tmp);
-  vec_copy(mspace, u, tmp);
-  u[0] = uleft[1] * tmp[0]  -uleft[1] * tmp[1];
-  for(int i=1; i<mspace-1; i++)
-  {
-    u[i] = uleft[i-1]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  -uleft[i+1]*tmp[i+1];
-  }
-  u[mspace-1] = uleft[mspace-2] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
+void
+apply_Uinv(double dt, double dx, int M, double *u)
+{
+   for (int i = 0; i <= M-1; i++)
+   {
+      u[i] /= dx*dt;
+   }
 }
 
-void 
-apply_B_transpose(double dt, int mspace, double nu, double *u, double *uleft){
-  double *tmp;
-  vec_create(mspace, &tmp);
-  vec_copy(mspace, u, tmp);
-  u[0] = uleft[1] * tmp[0] + uleft[0] * tmp[1];
-  for(int i=1; i<mspace-1; i++)
-  {
-    u[i] = -uleft[i]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  + uleft[i]*tmp[i+1];
-  }
-  u[mspace-1] = -uleft[mspace-1] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
+/*------------------------------------*/
+
+void
+apply_Vinv(double dt, double dx, double alpha, int M, double *v)
+{
+   for (int i = 0; i <= M-1; i++)
+   {
+      v[i] /= alpha*dx*dt;
+   }
+   
 }
 
-void 
-find_gamma(double *u, int mspace){
-  double *tmp;
-  vec_create(mspace, &tmp);
-  vec_copy(mspace, u, tmp);
+/*------------------------------------*/
 
-  u[0] = tmp[0]*tmp[1];
-  for(int i=1; i<mspace-1; i++)
-  {
-    u[i] = tmp[i]*tmp[i+1] - tmp[i]*tmp[i-1];
-  }
-  u[mspace-1] = -tmp[mspace-1] * tmp[mspace-2];
+void
+apply_D(double dt, double dx, double nu, int M, double *v, double *l, double *a)
+{
+   for (int i = 0; i <= M-1; i++)
+   {
+      v[i] *= dt;
+   }
+}
 
-  vec_destroy(tmp);
+/*------------------------------------*/
 
+void
+apply_DAdjoint(double dt, double dx, double nu, int M, double *v, double *l, double *a)
+{
+   for (int i = 0; i <= M-1; i++)
+   {
+      v[i] *= dt;
+   }
 }
 
 /*------------------------------------*/
@@ -457,12 +297,14 @@ my_TriResidual(braid_App       app,
                braid_TriStatus status)
 {
    double  t, tprev, tnext, dt, dx;
+   double  nu = (app->nu);
    double  alpha = (app->alpha);
-   double *rtmp,*rtmp2,*rtmp3,*rtmp4, *utmp, *utmp2;
+   double *rtmp, *utmp;
    int     level, index;
    int     mspace = (app->mspace);
    double *u0 = (app->U0);
-   double nu = (app->nu);
+   double *li = (app->li);
+   double *ai = (app->ai);
 
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -479,120 +321,90 @@ my_TriResidual(braid_App       app,
       dt = t - tprev;
    }
 
-   
-
-
    /* Get the space-step size */
    dx = 1/((double)(mspace+1));
 
    /* Create temporary vectors */
    vec_create(mspace, &rtmp);
-   vec_create(mspace, &rtmp2);
-   vec_create(mspace, &rtmp3);
-   vec_create(mspace, &rtmp4);
    vec_create(mspace, &utmp);
-   vec_create(mspace, &utmp2);
 
-   /* Compute residual on second row*/
-   vec_copy(mspace, r->values[0], rtmp);
-   vec_scale(mspace, dx*dt, rtmp);
 
-   vec_copy(mspace, r->values[2], utmp);
-   apply_Aadjoint(dt,dx,nu,mspace,utmp);
+   /* Compute action of center block */
+
+   /* rtmp = U_i^{-1}AA^T u */
+   vec_copy(mspace, (r->values), utmp);
+   apply_A(dt, dx, nu, mspace, utmp);
+   apply_Aadjoint(dt, dx, nu, mspace, utmp);
+   apply_Uinv(dt, dx, mspace, utmp);
+   vec_copy(mspace, utmp, rtmp);
+
+   /* rtmp = rtmp + D_i^T V_i^{-1} D_i^T u */
+   vec_copy(mspace, (r->values), utmp);
+   apply_DAdjoint(dt, dx, nu, mspace, utmp, li, ai);
+   apply_Vinv(dt, dx, alpha, mspace, utmp);
+   apply_D(dt, dx, nu, mspace, utmp, li, ai);
    vec_axpy(mspace, 1.0, utmp, rtmp);
 
-  if(uright!=NULL){
-    vec_axpy(mspace, -1.0, uright->values[2], rtmp);
-  }
-
-   vec_copy(mspace,r->values[2], utmp);
-   vec_copy(mspace,r->values[0], utmp2);
-   apply_B(dt,mspace,nu,utmp,utmp2);
-   vec_axpy(mspace, g(dt,dx), utmp, rtmp);
-
-   vec_axpy(mspace, -dx*dt, u0, rtmp);
-
-
-  /* Compute residual on third row*/
-
-   vec_copy(mspace, r->values[1], rtmp2);
-   vec_scale(mspace, alpha*dx*dt, rtmp2);
-   vec_axpy(mspace, -dt, r->values[2], rtmp2);
-   
-
-
-/* Compute residual on fourth row*/
-
-   vec_copy(mspace, r->values[0], rtmp3);
-   apply_A(dt,dx,nu,mspace,rtmp3);
-
-   if(uleft!=NULL){
-    vec_axpy(mspace, -1.0, uleft->values[0], rtmp3);
-   }else{
-    vec_axpy(mspace, -1.0, u0, rtmp3);
-   }
-
-   vec_copy(mspace, r->values[0], utmp);
-   find_gamma(utmp, mspace);
-   vec_axpy(mspace, g(dt,dx), utmp, rtmp3);
-
-   vec_axpy(mspace, -dt, r->values[1], rtmp3);
-
-
-
-  
- /* Compute residual on first row*/
-
-    if (uleft != NULL)
+   /* rtmp = rtmp + Phi_i U_{i-1}^{-1} Phi_i^T u */
+   /* This term is zero at time 0, since Phi_0 = 0 */
+   if (uleft != NULL)
    {
-    vec_copy(mspace,uleft->values[0], rtmp4);
-    vec_scale(mspace,dx*dt,rtmp4);
-
-    vec_copy(mspace, uleft->values[2], utmp);
-    apply_Aadjoint(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace,1.0,utmp,rtmp4);
-
-    vec_axpy(mspace, -1.0, r->values[2], rtmp4);
-
-    vec_copy(mspace, uleft->values[2], utmp);
-    vec_copy(mspace, uleft->values[0], utmp2);
-    apply_B(dt,mspace,nu,utmp,utmp2);
-    vec_axpy(mspace, g(dt,dx), utmp, rtmp4);
-
-    vec_axpy(mspace, -dx*dt, u0, rtmp4);
+      vec_copy(mspace, (r->values), utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
    }
 
-  else{
-    vec_scale(mspace, 0.0, utmp);
-    vec_copy(mspace, utmp, rtmp4);
-  }
 
-  if (f != NULL)
+   /* Compute action of west block */
+   if (uleft != NULL)
+   {
+      vec_copy(mspace, (uleft->values), utmp);
+      apply_Aadjoint(dt, dx, nu, mspace, utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp);
+   }
+
+
+   /* Compute action of east block */
+   if (uright != NULL)
+   {
+      vec_copy(mspace, (uright->values), utmp);
+      apply_A(dt, dx, nu, mspace, utmp);
+      apply_Uinv(dt, dx, mspace, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp);
+   }
+
+
+   /* No change for index 0 */
+   if (!homogeneous)
+   {
+      vec_copy(mspace, u0, utmp);
+      vec_axpy(mspace, 1.0, utmp, rtmp);
+
+      vec_copy(mspace, u0,utmp);
+      apply_A(dt, dx, nu, mspace, utmp);
+      vec_axpy(mspace, -1.0, utmp, rtmp); 
+
+   }
+
+
+   /* Subtract rhs f */
+   if (f != NULL)
    {
       /* rtmp = rtmp - f */
-      vec_axpy(mspace, -1.0, (f->values[0]), rtmp);
-      vec_axpy(mspace, -1.0, (f->values[1]), rtmp2);
-      vec_axpy(mspace, -1.0, (f->values[2]), rtmp3);
-      vec_axpy(mspace, -1.0, (f->values[3]), rtmp4);
+      vec_axpy(mspace, -1.0, (f->values), rtmp);
    }
 
-
+   
    /* Copy temporary residual vector into residual */
-   vec_copy(mspace, rtmp, (r->values[0]));
-   vec_copy(mspace, rtmp2, (r->values[1]));
-   vec_copy(mspace, rtmp3, (r->values[2]));
-   vec_copy(mspace, rtmp4, (r->values[3]));
+   vec_copy(mspace, rtmp, (r->values));
    
    /* Destroy temporary vectors */
    vec_destroy(rtmp);
-   vec_destroy(rtmp2);
-   vec_destroy(rtmp3);
-   vec_destroy(rtmp4);
    vec_destroy(utmp);
-   vec_destroy(utmp2);
    
    return 0;
-}     
+}   
 
 /*------------------------------------*/
 
@@ -607,22 +419,12 @@ my_TriSolve(braid_App       app,
             braid_Int       homogeneous,
             braid_TriStatus status)
 {
-
    double  t, tprev, tnext, dt, dx;
-   double *utmp, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
+   double *utmp, *rtmp;
    int mspace = (app->mspace);
    double nu = (app->nu);
    double *li = (app->li);
    double *ai = (app->ai);
-   double alpha = (app->alpha);
-
-   double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageW;
-   vec_create(mspace, &dW);
-   vec_create(mspace, &dU);
-   vec_create(mspace, &dV);
-   for(int i=0; i<mspace; i++) dW[i]=0.0;
-   for(int i=0; i<mspace; i++) dV[i]=0.0;
-   for(int i=0; i<mspace; i++) dU[i]=0.0;
    
    /* Get the time-step size */
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -634,108 +436,33 @@ my_TriSolve(braid_App       app,
    {
       dt = t - tprev;
    }
-   //index 0 refers to U, 1 to V, 2 to W
 
    /* Get the space-step size */
-   dx = 1/((double)(mspace+1));
-   vec_create(mspace, &storage1);
-   vec_create(mspace, &storage2);
-   vec_create(mspace, &storage3);
-   vec_create(mspace, &storageW);
-   vec_copy(mspace, (u->values)[0], storage1);
-   vec_copy(mspace, (u->values)[1], storage2);
-   vec_copy(mspace, (u->values)[2], storage3);
-   if(uleft!=NULL){
-   vec_copy(mspace, (uleft->values)[2], storageW);
-    }
+   dx = 1/((double)(mspace+1));;
+
    /* Create temporary vector */
    vec_create(mspace, &utmp);
-   vec_create(mspace, &r1);
-   vec_create(mspace, &r2);
-   vec_create(mspace, &r3);
-   vec_create(mspace, &r4);
 
-   //call our residual routine
+   /* Initialize temporary solution vector */
+   vec_copy(mspace, (u->values), utmp);
+   
+   /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
 
-   //copy residual vectors into temp vectors
-   vec_copy(mspace, u->values[0], r1);
-   vec_copy(mspace, u->values[1], r2);
-   vec_copy(mspace, u->values[2], r3);
-   vec_copy(mspace, u->values[3], r4);
+   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
+    *
+    * Using [\tilde{C_i}] = 2AA^T
+    * 
+   */
 
-   /*solve for deltaW*/
-
-    vec_copy(mspace, r4, utmp);
-    if(uleft!=NULL){
-      apply_C_inverse(dt,dx,nu,mspace,storageW,utmp);
-    }
-    else{
-      vec_scale(mspace,0.0,utmp);
-    }
-
-    vec_axpy(mspace, -1.0, utmp, dW);
-
-    vec_copy(mspace, r1, utmp);
-    apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
-    apply_B_transpose(dt,mspace,nu,utmp,storage1);
-    if(uleft!=NULL){
-      vec_axpy(mspace, g(dt,dx), utmp, dW);
-    }else{
-      vec_axpy(mspace, 1.0, utmp, dW);
-    }
-
-    vec_copy(mspace, r1, utmp);
-    apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
-    apply_A(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace, 1.0, utmp, dW);
-
-    vec_axpy(mspace, -1.0/(alpha*dx), r2, dW);
-
-    vec_axpy(mspace, -1.0, r3, dW);
-
-   //apply c_tilde inverse
-    apply_B_transpose_inverse(dt,dx,nu,mspace,storage1,dW);
-    apply_C(dt,dx,nu,mspace,storage3,dW);
-    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
-
-    //update dU and dV based on dW
-    //dV
-    vec_copy(mspace, r2, dV);
-    vec_axpy(mspace, dt, dW, dV);
-    vec_scale(mspace, 1.0/(alpha*dx*dt), dV);
-    //dU
-    vec_copy(mspace,r1,dU);
-    vec_copy(mspace,dW,utmp);
-    apply_B(dt,mspace,nu,utmp,storage1);
-    vec_axpy(mspace,-g(dt,dx),utmp,dU);
-    vec_copy(mspace,dW,utmp);
-    apply_Aadjoint(dt,dx,nu,mspace,utmp);
-    vec_axpy(mspace,-1.0, utmp,dU);
-    apply_C_inverse(dt,dx,nu,mspace,storage3,dU);
+   rtmp = (u->values);
+   vec_scale(mspace, -0.5*dx*dt, rtmp);
+   apply_Phi(dt, dx, nu, mspace, rtmp, li, ai);
+   apply_PhiAdjoint(dt, dx, nu, mspace, rtmp, li, ai);
 
 
-   /* Complete update of solution */
-   vec_axpy(mspace, -1.0, dU, storage1);
-   vec_axpy(mspace, -1.0, dV, storage2);
-   vec_axpy(mspace, -1.0, dW, storage3);
-
-   vec_copy(mspace, storage1, u->values[0]);
-   vec_copy(mspace, storage2, u->values[1]);
-   vec_copy(mspace, storage3, u->values[2]);
-
-   vec_destroy(r1);
-   vec_destroy(r2);
-   vec_destroy(r3);
-   vec_destroy(r4);
-   vec_destroy(utmp);
-   vec_destroy(storage1);
-   vec_destroy(storage2);
-   vec_destroy(storage3);
-   vec_destroy(dU);
-   vec_destroy(dV);
-   vec_destroy(dW);
-
+   /* Complete residual update */
+   vec_axpy(mspace, 1.0, utmp, (u->values));
    
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
@@ -752,22 +479,16 @@ my_Init(braid_App     app,
         double        t,
         braid_Vector *u_ptr)
 {
-   
+   my_Vector *u;
    int mspace = (app->mspace);
 
    /* Allocate the vector */
-   my_Vector *u;
-   u= (my_Vector *) malloc(sizeof(my_Vector));
-   //one extra component allocated for residual containing 4 entries
-   u->values = (double**) malloc(4*sizeof(double*) );
-   for(int i=0; i<4; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
+   u = (my_Vector *) malloc(sizeof(my_Vector));
+   vec_create(mspace, &(u->values));
 
    for (int i = 0; i <= mspace-1; i++)
    {
-      u->values[0][i] = 0.5;
-      u->values[1][i] = 2.0;
-      u->values[2][i] = 0.001;
-      u->values[3][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[i] = ((double)braid_Rand())/braid_RAND_MAX;
    }
 
    *u_ptr = u;
@@ -787,17 +508,12 @@ my_Clone(braid_App     app,
 
    /* Allocate the vector */
    v = (my_Vector *) malloc(sizeof(my_Vector));
-   //one extra component allocated for residual containing 4 entries
-   v->values = (double**) malloc(4*sizeof(double*) );
-   for(int i=0; i<4; i++) v->values[i] = (double *) malloc(mspace * sizeof(double));
+   vec_create(mspace, &(v->values));
 
    /* Clone the values */
    for (int i = 0; i<= mspace-1; i++)
    {
-      v->values[0][i] = u->values[0][i];
-      v->values[1][i] = u->values[1][i];
-      v->values[2][i] = u->values[2][i];
-      v->values[3][i] = u->values[3][i];
+      v->values[i] = u->values[i];
    }
 
    *v_ptr = v;
@@ -811,7 +527,6 @@ int
 my_Free(braid_App    app,
         braid_Vector u)
 {
-
    free(u->values);
    free(u);
 
@@ -830,9 +545,7 @@ my_Sum(braid_App     app,
    int mspace = (app->mspace);
    for (int i = 0; i <= mspace-1; i++)
    {
-      (y->values)[0][i] = alpha*(x->values)[0][i] + beta*(y->values)[0][i];
-      (y->values)[1][i] = alpha*(x->values)[1][i] + beta*(y->values)[1][i];
-      (y->values)[2][i] = alpha*(x->values)[2][i] + beta*(y->values)[2][i];
+      (y->values)[i] = alpha*(x->values)[i] + beta*(y->values)[i];
    }
 
    return 0;
@@ -850,9 +563,7 @@ my_SpatialNorm(braid_App     app,
    int mspace = (app->mspace);
    for (i = 0; i <= mspace-1; i++)
    {
-      dot += (u->values)[0][i]*(u->values)[0][i];
-      dot += (u->values)[1][i]*(u->values)[1][i];
-      dot += (u->values)[2][i]*(u->values)[2][i];
+      dot += (u->values)[i]*(u->values)[i];
    }
    *norm_ptr = sqrt(dot);
 
@@ -868,39 +579,57 @@ my_Access(braid_App          app,
           braid_Vector       u,
           braid_AccessStatus astatus)
 {
-   int   done, index, i, j, ii;
+   int   done, index, ii;
    int   mspace = (app->mspace);
+   double *U0 = (app->U0);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);
-
    if (done)
    {
-      /* Allocate w array in app (ZTODO: This only works on one proc right now) */
-      if ((app->w) == NULL)
-      {
-         int  ntpoints;
-         braid_AccessStatusGetNTPoints(astatus, &ntpoints);
-         ntpoints++;  /* ntpoints is really the gupper index */
-        (app->w) = (double ***)malloc(ntpoints*sizeof(double**));
-        for (i = 0; i< ntpoints; i++) {
-         app->w[i] = (double **) malloc(3*sizeof(double *));
-          for (j = 0; j < 3; j++) {
-              app->w[i][j] = (double *)malloc(mspace*sizeof(double));
-          }
-        }
-      }
       braid_AccessStatusGetILowerUpper(astatus, &(app->ilower), &(app->iupper));
       (app->npoints) = (app->iupper) - (app->ilower) + 1;
+
+      /* Allocate w array in app */
+      if ((app->w) == NULL)
+      {
+         (app->w) = (double **) calloc((app->npoints), sizeof(double *));
+      }
+
       braid_AccessStatusGetTIndex(astatus, &index);
       ii = index - (app->ilower);
-      app->w[ii][0] = u->values[0];
-      app->w[ii][1] = u->values[1];
-      app->w[ii][2] = u->values[2];
+      if (app->w[ii] != NULL)
+      {
+         free(app->w[ii]);
+      }
+      vec_create(mspace, &(app->w[ii]));
+      vec_copy(mspace, (u->values), (app->w[ii]));
    }
 
 
+   //  Below prints U, V, and W after selected iterations. This can then be plotted to show how the space-time solution changes after iterations. 
 
+   /*   char  filename[255];
+      FILE *file;
+      int  iter;
+      braid_AccessStatusGetIter(astatus, &iter);
+      braid_AccessStatusGetTIndex(astatus, &index);
+      / * file format is advec-diff-btcs.out.{iteration #}.{time index} * /
+      if(iter%1==0){
+         sprintf(filename, "%s.%04d.%04d", "out/advec-diff-btcs.v.out", iter, index);
+         file = fopen(filename, "w");
+         for(int i = 0; i<mspace; i++){
+             if(i<mspace-1){
+                fprintf(file, "%1.14e, ", (u->values)[i]);
+             }
+             else{
+                fprintf(file, "%1.14e", (u->values)[i]);
+             }
+         }
+      fflush(file);
+      fclose(file);
+      }
+   */
    return 0;
 }
 
@@ -911,8 +640,8 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-  int mspace = app->mspace;
-   *size_ptr = mspace*4*sizeof(double);
+  int mspace = (app->mspace); 
+   *size_ptr = mspace*sizeof(double);
    return 0;
 }
 
@@ -924,20 +653,16 @@ my_BufPack(braid_App           app,
            void               *buffer,
            braid_BufferStatus  bstatus)
 {
-
    double *dbuffer = buffer;
    int i;
    int mspace = (app->mspace); 
 
-   for(i = 0; i <mspace; i++)
+   for(i = 0; i < mspace; i++)
    {
-      dbuffer[i] = (u->values)[0][i];
-      dbuffer[mspace + i] = (u->values)[1][i];
-      dbuffer[2*mspace + i] = (u->values)[2][i];
-      dbuffer[3*mspace + i] = (u->values)[3][i];
+      dbuffer[i] = (u->values)[i];
    }
 
-   braid_BufferStatusSetSize( bstatus,  mspace*4*sizeof(double));
+   braid_BufferStatusSetSize( bstatus,  mspace*sizeof(double));
 
    return 0;
 }
@@ -954,19 +679,15 @@ my_BufUnpack(braid_App           app,
    double    *dbuffer = buffer;
    int i;
    int mspace = (app->mspace); 
+
    /* Allocate memory */
-   u= (my_Vector *) malloc(sizeof(my_Vector));
-   //one extra component allocated for residual containing 4 entries
-   u->values = (double**) malloc(4*sizeof(double*) );
-   for(int i=0; i<4; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
+   u = (my_Vector *) malloc(sizeof(my_Vector));
+   u->values = (double*) malloc( mspace*sizeof(double) );
 
    /* Unpack the buffer */
    for(i = 0; i < mspace; i++)
    {
-      (u->values)[0][i] = dbuffer[i];
-      (u->values)[1][i] = dbuffer[mspace+i];
-      (u->values)[2][i] = dbuffer[2*mspace+i];
-      (u->values)[3][i] = dbuffer[3*mspace+i];
+      (u->values)[i] = dbuffer[i];
    }
 
    *u_ptr = u;
@@ -991,7 +712,7 @@ main(int argc, char *argv[])
    int         access_level, print_level;
    double      tol;
    double time;
-   start=clock();
+   
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -999,11 +720,11 @@ main(int argc, char *argv[])
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
    mspace = 8;
-   ntime = 256;
+   ntime  = 256;
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
-   nu    = 2;                /* parameter in PDE */
+   nu    = 2;               /* parameter in PDE */
 
    /* Define some Braid parameters */
    max_levels     = 30;
@@ -1118,12 +839,13 @@ main(int argc, char *argv[])
 
 
    /* Define the space step */
-   dx=(double)1/(mspace+1);
+   dx = (double)1/(mspace+1);
 
    /* Define time domain and step */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
-   dt = (tstop-tstart)/ntime; 
+   dt     = (tstop-tstart)/ntime; 
+    
 
    /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
@@ -1134,34 +856,30 @@ main(int argc, char *argv[])
    app->alpha    = alpha;
    app->w        = NULL;
 
-   /* Set this to whatever u0 is. */
-
+   /* Set this to u0 in the problem formulation */
    double *U0 = (double*) malloc( ntime*sizeof(double) );
-   for(int i=0; i<mspace/2; i++){
-      U0[i]=1;
+   for(int i=0; i<mspace/2; i++)
+   {
+      U0[i] = 1;
    }
 
    for(int i=mspace/2; i<mspace; i++)
    {
-      U0[i]=0;
+      U0[i] = 0;
    }
 
    app->U0       = U0;
 
    /* Find elements of LU decomposition of A */
-
    double *ai = (double*) malloc( mspace*sizeof(double) );
    double *li = (double*) malloc( (mspace-1)*sizeof(double) );
-   ai[0] = 1+2*b(dt,dx,nu);
+   ai[0] = 1+g(dt,dx)+2*b(dt,dx,nu);
    for(int i=1; i<mspace; i++){
-      li[i-1] = -(b(dt,dx,nu))/ai[i-1];
-      ai[i] = ai[0]+(b(dt,dx,nu))*li[i-1];
+      li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/ai[i-1];
+      ai[i] = ai[0]+b(dt,dx,nu)*li[i-1];
    }
    app->ai       = ai;
    app->li       = li;
-
-
-
 
    /* Initialize XBraid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
@@ -1184,44 +902,101 @@ main(int argc, char *argv[])
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
+   start=clock();
    braid_Drive(core);
+   end=clock();
 
    dx = 1/((double)(mspace+1));;
    
-
+   /* Writes final solution to files */
    if (access_level > 0)
    {
       /* Print adjoint w to file */
       {
          char  filename[255];
          FILE *file;
-         int   i,j,index;
+         int   i,j, index;
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->npoints); i++)
          {
-            double ***w = (app->w);
+            double **w = (app->w);
             index = (app->ilower) + i +1;
             fprintf(file, "%05d: ", index);
             for(j=0; j <mspace; j++){
-               if(j==mspace-1){
-                  fprintf(file, "% 1.14e", w[i][0][j]);
+               if(j==mspace-1)
+               {
+                  fprintf(file, "% 1.14e", w[i][j]);
                }
-               else{
-                  fprintf(file, "% 1.14e, ", w[i][0][j]);
+               else
+               {
+                  fprintf(file, "% 1.14e, ", w[i][j]);
                }
             }
             fprintf(file, "\n");
          }
          fflush(file);
          fclose(file);
+      }
 
-         char filename1[255]; 
+         time = (double)(end-start)/CLOCKS_PER_SEC;
+         printf("Total Run Time: %f s \n", time);
+         {
+            char    filename[255];
+            FILE   *file;
 
+            sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 8);
+
+            file = fopen(filename, "w");
+            fprintf(file, "%f", time);
+            fflush(file);
+            fclose(file);
+         }
+         /* Prints solutions to files */      
+         char    filename[255];
+         FILE   *file;
+         int     i,j;
+         double *v;
+
+         double **vs = (double **)malloc(app->npoints * sizeof(double*));
+         for(int i = 0; i < app->npoints; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
+
+         /* Compute control v from adjoint w and print to file */
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
+         file = fopen(filename, "w");
+         vec_create((app->mspace), &v);
+         for (i = 0; i < (app->npoints); i++)
+         {
+            double **w = (app->w);
+            vec_copy(mspace, w[i], v);
+            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
+            apply_Vinv(dt, dx, alpha, mspace,v);
+
+            /* TODO Dynamical print based on size of v */
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
+            for (j = 0; j < (app->mspace); j++)
+            {
+               vs[i][j] = v[j];
+               if(j==mspace-1){
+                  fprintf(file, "% 1.14e", v[j]);
+               }
+               else{
+                  fprintf(file, "% 1.14e, ", v[j]);
+               }
+            }
+            fprintf(file, "\n");
+            
+         }
+         vec_destroy(v);
+         fflush(file);
+         fclose(file);
+      
+
+         char filename1[255];
          double *us;
 
-         sprintf(filename1, "%s.%03d", "out/advec-diff-rms.out.u0", (app->myid));
+         sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
          file = fopen(filename1, "w");
          vec_create(mspace, &us);
          vec_copy(mspace, U0, us);
@@ -1236,19 +1011,37 @@ main(int argc, char *argv[])
             }
          vec_destroy(us);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.v", (app->myid));
+         /* Compute state u from adjoint w and print to file */
+         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
          file = fopen(filename, "w");
+         double **u = (double **)malloc(app->npoints * sizeof(double*));
+         for(int i = 0; i < app->npoints; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+         vec_create((app->mspace), &v);
          for (i = 0; i < (app->npoints); i++)
          {
-            double ***w = (app->w);
-            index = (app->ilower) + i +1;
-            fprintf(file, "%05d: ", index);
-            for(j=0; j <mspace; j++){
-               if(j==mspace-1){
-                  fprintf(file, "% 1.14e", w[i][1][j]);
+          double **w = (app->w);
+          vec_copy(mspace, w[i], v);
+
+            if(i!=app->npoints-1){
+              vec_copy(mspace, w[i],u[i]);
+              apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+              vec_scale(mspace,-1.0/(dx*dt),u[i]);
+              vec_axpy(mspace,1.0/(dx*dt),w[i+1],u[i]);
+              vec_axpy(mspace,1.0,U0,u[i]);
+            }else{
+              vec_copy(mspace, w[i],u[i]);
+              apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+              vec_scale(mspace,-1.0/(dx*dt),u[i]);
+              vec_axpy(mspace,1.0,U0,u[i]);
+            }
+
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
+            for (j = 0; j < mspace; j++){
+            if(j==mspace-1){
+                  fprintf(file, "% 1.14e", u[i][j]);
                }
                else{
-                  fprintf(file, "% 1.14e, ", w[i][1][j]);
+                  fprintf(file, "% 1.14e, ", u[i][j]);
                }
             }
             fprintf(file, "\n");
@@ -1256,41 +1049,21 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.w", (app->myid));
-         file = fopen(filename, "w");
-         for (i = 0; i < (app->npoints); i++)
+         // Calculates value of objective function
+         /*double objective_val=0;
+
+         for(int i=0; i<ntime; i++)
          {
-            double ***w = (app->w);
-            index = (app->ilower) + i +1;
-            fprintf(file, "%05d: ", index);
-            for(j=0; j <mspace; j++){
-               if(j==mspace-1){
-                  fprintf(file, "% 1.14e", w[i][2][j]);
-               }
-               else{
-                  fprintf(file, "% 1.14e, ", w[i][2][j]);
-               }
+            for(int j=0; j<mspace; j++)
+            {
+               objective_val += ((u[i][j] - U0[j]) * (u[i][j] - U0[j]) + alpha*vs[i][j]*vs[i][j] ) * dx;
             }
-            fprintf(file, "\n");
+            objective_val *= dt;
          }
-         fflush(file);
-         fclose(file);
-      }
+         printf("Objective Function Value: %f \n", objective_val);
+         */
       
-      end=clock();
-         time = (double)(end-start)/CLOCKS_PER_SEC;
-         printf("Total Run Time: %f s \n", time);
-         {
-            char    filename[255];
-            FILE   *file;
-            sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
-            file = fopen(filename, "w");
-            fprintf(file, "%f", time);
-            fflush(file);
-            fclose(file);
-         }
    }
-
 
    free(app);
    

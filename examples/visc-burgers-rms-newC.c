@@ -191,55 +191,6 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
 }
 
 void
-apply_B_transpose_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{   
-   /* Find LU decomposition */
-   double *ai = (double*) malloc( M*sizeof(double) );
-   double *li = (double*) malloc( (M-1)*sizeof(double) );
-   double *bi = (double*) malloc( (M-1)*sizeof(double) );
-   ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
-
-   for(int i=1; i<M-1; i++){
-      bi[i-1] = -b(dt,dx,nu)+g(dt,dx)*u[i-1];
-      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i])/ai[i-1];
-      ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
-   }
-   bi[M-2] = -b(dt,dx,nu)+g(dt,dx)*u[M-2];
-   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-1])/ai[M-2];
-   ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
-
-
-
-   /* Solve Lw=u (Lw=f) */
-   double *w;
-   vec_create(M, &w);
-   double *f;
-   vec_create(M, &f);
-   vec_copy(M, r, f);
-   w[0]=f[0];
-   for (int i = 1; i < M; i++)
-   {
-      w[i]=f[i]-li[i-1]*w[i-1];
-   }
-
-   /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/ai[M-1];
-   for (int i = M-2; i >= 0; i--)
-   {
-      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-   }
-
-   vec_destroy(w);
-   vec_destroy(f);
-   free(ai);
-   free(li);
-   free(bi);
-
-
-
-}
-
-void
 apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
 {  
    /* Find LU decomposition */
@@ -407,19 +358,6 @@ apply_B(double dt, int mspace, double nu, double *u, double *uleft){
     u[i] = uleft[i-1]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  -uleft[i+1]*tmp[i+1];
   }
   u[mspace-1] = uleft[mspace-2] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
-}
-
-void 
-apply_B_transpose(double dt, int mspace, double nu, double *u, double *uleft){
-  double *tmp;
-  vec_create(mspace, &tmp);
-  vec_copy(mspace, u, tmp);
-  u[0] = uleft[1] * tmp[0] + uleft[0] * tmp[1];
-  for(int i=1; i<mspace-1; i++)
-  {
-    u[i] = -uleft[i]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  + uleft[i]*tmp[i+1];
-  }
-  u[mspace-1] = -uleft[mspace-1] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
 }
 
 void 
@@ -616,7 +554,7 @@ my_TriSolve(braid_App       app,
    double *ai = (app->ai);
    double alpha = (app->alpha);
 
-   double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageW;
+   double *dW, *dU, *dV, *storage1, *storage2, *storage3;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
@@ -641,13 +579,9 @@ my_TriSolve(braid_App       app,
    vec_create(mspace, &storage1);
    vec_create(mspace, &storage2);
    vec_create(mspace, &storage3);
-   vec_create(mspace, &storageW);
    vec_copy(mspace, (u->values)[0], storage1);
    vec_copy(mspace, (u->values)[1], storage2);
    vec_copy(mspace, (u->values)[2], storage3);
-   if(uleft!=NULL){
-   vec_copy(mspace, (uleft->values)[2], storageW);
-    }
    /* Create temporary vector */
    vec_create(mspace, &utmp);
    vec_create(mspace, &r1);
@@ -668,7 +602,7 @@ my_TriSolve(braid_App       app,
 
     vec_copy(mspace, r4, utmp);
     if(uleft!=NULL){
-      apply_C_inverse(dt,dx,nu,mspace,storageW,utmp);
+      apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
     }
     else{
       vec_scale(mspace,0.0,utmp);
@@ -678,11 +612,11 @@ my_TriSolve(braid_App       app,
 
     vec_copy(mspace, r1, utmp);
     apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
-    apply_B_transpose(dt,mspace,nu,utmp,storage1);
+    apply_B(dt,mspace,nu,utmp,storage1);
     if(uleft!=NULL){
       vec_axpy(mspace, g(dt,dx), utmp, dW);
     }else{
-      vec_axpy(mspace, 1.0, utmp, dW);
+      vec_axpy(mspace, g(dt,dx), utmp, dW);
     }
 
     vec_copy(mspace, r1, utmp);
@@ -695,9 +629,10 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-    apply_B_transpose_inverse(dt,dx,nu,mspace,storage1,dW);
+  
     apply_C(dt,dx,nu,mspace,storage3,dW);
-    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+    vec_scale(mspace,0.5,dW);
+    
 
     //update dU and dV based on dW
     //dV
@@ -764,9 +699,9 @@ my_Init(braid_App     app,
 
    for (int i = 0; i <= mspace-1; i++)
    {
-      u->values[0][i] = 0.5;
-      u->values[1][i] = 2.0;
-      u->values[2][i] = 0.001;
+      u->values[0][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[1][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[2][i] = ((double)braid_Rand())/braid_RAND_MAX;
       u->values[3][i] = ((double)braid_Rand())/braid_RAND_MAX;
    }
 

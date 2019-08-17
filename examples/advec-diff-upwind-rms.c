@@ -47,7 +47,7 @@
 #include "braid.h"
 #include "braid_test.h"
 #define PI 3.14159265
-#define g(dt,dx) dt/(2*dx)
+#define g(dt,dx) dt/dx
 #define b(dt,dx,nu) nu*dt/(dx*dx)
 /*--------------------------------------------------------------------------
  * My App and Vector structures
@@ -155,7 +155,7 @@ apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *
   }
 
   /* Now solve Ux=w */ 
-  double b = g(dt,dx)-b(dt, dx, nu);
+  double b = -b(dt, dx, nu);
   u[M-1]=w[M-1]/a[M-1];
   for (int i = M-2; i >= 0; i--)
   {
@@ -170,13 +170,14 @@ apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, d
 {
   /* First solve U^Tw=u (U^Tw=f) */
 
+  /* Need to change this w to some other letter becuase w is already passed as a parameter of this function */
   double *w;
 
   vec_create(M, &w);
   double *f;
   vec_create(M, &f);
   vec_copy(M, u, f);
-  double b = g(dt,dx)-b(dt, dx, nu);
+  double b = -b(dt, dx, nu);
   w[0]=f[0]/a[0];
   for (int i = 1; i < M; i++)
   {
@@ -198,8 +199,8 @@ void
 apply_A(double dt, double dx, double nu, int M, double *u)
 {
   double A = -g(dt,dx)-b(dt,dx,nu);
-  double B = 1+2*b(dt,dx,nu);
-  double C = g(dt,dx)-b(dt,dx,nu);
+  double B = 1+g(dt,dx)+2*b(dt,dx,nu);
+  double C = -b(dt,dx,nu);
   double *uold;
   vec_create(M, &uold);
   vec_copy(M, u, uold);
@@ -209,7 +210,6 @@ apply_A(double dt, double dx, double nu, int M, double *u)
   {
     u[i]=A*uold[i-1]+B*uold[i]+C*uold[i+1];
   }
-
 }
 
 /*------------------------------------*/
@@ -218,8 +218,8 @@ void
 apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 {
   double A = -g(dt,dx)-b(dt,dx,nu);
-  double B = 1+2*b(dt,dx,nu);
-  double C = g(dt,dx)-b(dt,dx,nu);
+  double B = 1+g(dt,dx)+2*b(dt,dx,nu);
+  double C = -b(dt,dx,nu);
   double *uold;
   vec_create(M, &uold);
   vec_copy(M, u, uold);
@@ -250,7 +250,7 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
   for (int i = 0; i <= M-1; i++)
   {
     v[i] /= alpha*dx*dt;
-  }   
+  } 
 }
 
 /*------------------------------------*/
@@ -258,6 +258,8 @@ apply_Vinv(double dt, double dx, double alpha, int M, double *v)
 void
 apply_D(double dt, double dx, double nu, int M, double *v)
 {
+  //add all arguments to apply_Phi below based on what Isaiah does
+  /* apply_Phi(dt, dx, nu, M, v, l, a); */
   for (int i = 0; i <= M-1; i++)
   {
     v[i] *= dt;
@@ -269,6 +271,8 @@ apply_D(double dt, double dx, double nu, int M, double *v)
 void
 apply_DAdjoint(double dt, double dx, double nu, int M, double *v)
 {
+  //add all arguments to apply_PhiAdjoing based on what Isaiah does
+  /* apply_PhiAdjoint(dt, dx, nu, M, v, l, a); */
   for (int i = 0; i <= M-1; i++)
   {
     v[i] *= dt;
@@ -293,12 +297,12 @@ my_TriResidual(braid_App       app,
                braid_TriStatus status)
 {
   double  t, tprev, tnext, dt, dx;
-  double  alpha = (app->alpha);
   double *rtmp,*rtmp2,*rtmp3,*rtmp4, *utmp, *utmp2;
   int     level, index;
   int     mspace = (app->mspace);
-  double *u0 = (app->U0);
-  double nu = (app->nu);
+  double  alpha  = (app->alpha);
+  double  *u0    = (app->U0);
+  double  nu     = (app->nu);
 
    
   braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
@@ -315,6 +319,7 @@ my_TriResidual(braid_App       app,
     dt = t - tprev;
   }
 
+
   /* Get the space-step size */
   dx = 1/((double)(mspace+1));
 
@@ -329,6 +334,7 @@ my_TriResidual(braid_App       app,
   /* Compute residual on second row*/
   vec_copy(mspace, (r->values[0]), utmp);
   vec_copy(mspace, (r->values[2]), utmp2);
+
   vec_scale(mspace,dx*dt,utmp);
   apply_Aadjoint(dt, dx, nu, mspace, utmp2);
   vec_axpy(mspace,1.0,utmp2,utmp);
@@ -336,8 +342,8 @@ my_TriResidual(braid_App       app,
   
   if (uright != NULL)
   {
-  vec_copy(mspace, (uright->values[2]), utmp2);
-  vec_axpy(mspace,-1.0,utmp2,utmp);
+    vec_copy(mspace, (uright->values[2]), utmp2);
+    vec_axpy(mspace,-1.0,utmp2,utmp);
   }
 
   vec_copy(mspace, utmp, rtmp);
@@ -352,10 +358,9 @@ my_TriResidual(braid_App       app,
   vec_axpy(mspace,-1.0,utmp2,utmp);
 
   vec_copy(mspace, utmp, rtmp2);
+   
 
-
-/* Compute residual on fourth row*/
-
+  /* Compute residual on fourth row*/
   vec_copy(mspace, (r->values[0]), utmp);
   vec_copy(mspace, (r->values[1]), utmp2);
 
@@ -377,8 +382,7 @@ my_TriResidual(braid_App       app,
   vec_copy(mspace, utmp, rtmp3);
 
 
- /* Compute residual on first row*/
-
+  /* Compute residual on first row*/
   if (uleft != NULL)
   {
     vec_copy(mspace, (uleft->values[0]), utmp);
@@ -395,8 +399,8 @@ my_TriResidual(braid_App       app,
 
   else
   {
-    /* NEEDS TO BE DEALT WITH */  
-    vec_scale(mspace,0.0,utmp);
+    /* NEEDS TO BE DEALT WITH */
+    vec_scale(mspace, 0.0, utmp);
   }
 
   vec_copy(mspace, utmp, rtmp4);
@@ -412,7 +416,6 @@ my_TriResidual(braid_App       app,
   }
 
 
-  /* Compute residual for U^n-1 equation */
   /* Copy temporary residual vector into residual */
   vec_copy(mspace, rtmp, (r->values[0]));
   vec_copy(mspace, rtmp2, (r->values[1]));
@@ -426,9 +429,9 @@ my_TriResidual(braid_App       app,
   vec_destroy(rtmp4);
   vec_destroy(utmp);
   vec_destroy(utmp2);
-   
+  
   return 0;
-}     
+}    
 
 /*------------------------------------*/
 
@@ -445,10 +448,10 @@ my_TriSolve(braid_App       app,
 {
   double  t, tprev, tnext, dt, dx;
   double *utmp, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
-  int mspace = (app->mspace);
-  double nu = (app->nu);
-  double *li = (app->li);
-  double *ai = (app->ai);
+  int mspace   = (app->mspace);
+  double nu    = (app->nu);
+  double *li   = (app->li);
+  double *ai   = (app->ai);
   double alpha = (app->alpha);
 
   double *dW, *dU, *dV, *storage1, *storage2, *storage3;
@@ -497,10 +500,7 @@ my_TriSolve(braid_App       app,
   vec_copy(mspace, u->values[3], r4);
 
   /*solve for deltaW*/
-  if(uleft!=NULL)
-  {
-    vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
-  }
+  vec_axpy(mspace, -1.0/(dx*dt), r4, dW);
 
   apply_A(dt,dx,nu,mspace,r1);
   vec_axpy(mspace, 1.0/(dx*dt), r1, dW);
@@ -533,6 +533,7 @@ my_TriSolve(braid_App       app,
   vec_copy(mspace, storage1, u->values[0]);
   vec_copy(mspace, storage2, u->values[1]);
   vec_copy(mspace, storage3, u->values[2]);
+
   vec_destroy(r1);
   vec_destroy(r2);
   vec_destroy(r3);
@@ -545,6 +546,7 @@ my_TriSolve(braid_App       app,
   vec_destroy(dV);
   vec_destroy(dW);
 
+   
   /* no refinement */
   braid_TriStatusSetRFactor(status, 1);
 
@@ -947,13 +949,12 @@ main(int argc, char *argv[])
   app->U0       = U0;
 
   /* Find elements of LU decomposition of A */
-
   double *ai = (double*) malloc( mspace*sizeof(double) );
   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
-  ai[0] = 1+2*b(dt,dx,nu);
+  ai[0] = 1+g(dt,dx)+2*b(dt,dx,nu);
   for(int i=1; i<mspace; i++){
     li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/ai[i-1];
-    ai[i] = ai[0]+(b(dt,dx,nu)-g(dt,dx))*li[i-1];
+    ai[i] = ai[0]+b(dt,dx,nu)*li[i-1];
   }
   app->ai       = ai;
   app->li       = li;

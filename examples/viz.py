@@ -3,7 +3,7 @@ from matplotlib import pyplot as mpl
 from os import sys
 
 ###### Helper Functions ######
-def retrieve_data(var, vec, step):
+def retrieve_data(file_stem, var, vec, step):
     """
     Extracts solution data from desired files
     
@@ -19,11 +19,12 @@ def retrieve_data(var, vec, step):
     with open(fname) as f:
         lines = f.readlines()
         for line in lines:
-            index = int(line[:5])
+            index = int(line[:5]) - 1
             line = line[6:]
             split = line.split(',')
             count = 0
             if var == "u":
+                index += 1
                 vec[index,0] = left_bound
                 vec[index,mspace+1] = right_bound
                 count = 1
@@ -71,19 +72,18 @@ nsteps = None # added later if user does not define
 
 # User input
 arg_index = 1
-while arg_index < len(sys.argv)-1:
+while arg_index < len(sys.argv):
     if sys.argv[arg_index] == "-help":
-         print "\n"
-         print " Plots state, control, and adjoint solutions to time and 1D space dependent optimization problem \n\n"
-         print "  -file_stem <file_stem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
-         print "  -nsteps <nsteps>          : Num points in time\n"
-         print "  -start_t <start_t>        : Initial time point\n"
-         print "  -end_t <end_t>            : Final time point\n"
-         print "  -start_x <start_x>        : Initial space point\n"
-         print "  -end_x <end_x>            : Final space point\n"
-         print "  -l_bound  <l_bound>       : Value of initial space point at all times\n"
-         print "  -r_bound <r_bound>        : Value of final space point at all times\n"
-         exit()
+        print " Viz.py plots state, control, and adjoint solutions to time and 1D space dependent optimization problem \n\n"
+        print "  -file_stem <file_stem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
+        print "  -nsteps <nsteps>          : Num points in time\n"
+        print "  -start_t <start_t>        : Initial time point\n"
+        print "  -end_t <end_t>            : Final time point\n"
+        print "  -start_x <start_x>        : Initial space point\n"
+        print "  -end_x <end_x>            : Final space point\n"
+        print "  -l_bound  <l_bound>       : Value of initial space point at all times\n"
+        print "  -r_bound <r_bound>        : Value of final space point at all times\n"
+        exit()
 
     elif sys.argv[arg_index] == "-file_stem":
         arg_index += 1
@@ -143,7 +143,7 @@ for line in lines:
     split = line.split(',')
 mspace=len(split)
 if nsteps == None: # estimate nsteps if user did not define
-    nsteps=len(lines)*num_procs + 1
+    nsteps=len(lines)*num_procs
 
 # Create the time and space meshes
 tmesh = linspace(start_t,end_t,nsteps)
@@ -164,15 +164,14 @@ count=1
 state_vec[0,0] = left_bound
 state_vec[0,mspace+1] = right_bound
 for thing in split:
-    state_vec[0,count]=float(split[count-1])
+    state_vec[0,count]=float(thing)
     count+=1
 
 # Retrieves solutions of u, v, and w for each processor
 for step in range(0,num_procs):
-    state_vec = retrieve_data('u', state_vec, step)
-    control_vec = retrieve_data('v', control_vec, step)
-    adjoint_vec = retrieve_data('w', adjoint_vec, step)
-
+    state_vec = retrieve_data(file_stem, 'u', state_vec, step)
+    control_vec = retrieve_data(file_stem, 'v', control_vec, step)
+    adjoint_vec = retrieve_data(file_stem, 'w', adjoint_vec, step)
 
 import numpy
 import matplotlib.pyplot as plt
