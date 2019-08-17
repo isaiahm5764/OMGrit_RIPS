@@ -199,7 +199,7 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    double *bi = (double*) malloc( (M-1)*sizeof(double) );
    
    ai[0] = dx*dt;
-   for(int i=1; i<M-1; i++){
+   for(int i=1; i<M; i++){
       bi[i-1] = g(dt,dx)*(u[i-1]-u[i]);
       li[i-1] = g(dt,dx)*(u[i-1]-u[i])/ai[i-1];
       ai[i] = dx*dt-g(dt,dx)*g(dt,dx)*(u[i-1]-u[i])*(u[i-1]-u[i])/ai[i-1];
@@ -706,9 +706,9 @@ my_Init(braid_App     app,
 
    for (int i = 0; i <= mspace-1; i++)
    {
-      u->values[0][i] = ((double)braid_Rand())/braid_RAND_MAX;
-      u->values[1][i] = ((double)braid_Rand())/braid_RAND_MAX;
-      u->values[2][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[0][i] = 0.5;
+      u->values[1][i] = 2.0;
+      u->values[2][i] = 0.001;
       u->values[3][i] = ((double)braid_Rand())/braid_RAND_MAX;
    }
 

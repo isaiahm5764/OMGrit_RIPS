@@ -473,7 +473,7 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace,1.0,utmp,dW);
 
    //apply c_tilde inverse
-    vec_scale(mspace, dt, dW);
+    vec_scale(mspace, dx*dt, dW);
     apply_Phi(dt,dx,nu,mspace,dW,li,ai);
     apply_PhiAdjoint(dt,dx,nu,mspace,dW,li,ai);
 
