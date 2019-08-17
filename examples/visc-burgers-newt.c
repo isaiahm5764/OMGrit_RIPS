@@ -685,12 +685,7 @@ my_TriSolve(braid_App       app,
     vec_axpy(mspace, -1.0, r3, dW);
 
    //apply c_tilde inverse
-<<<<<<< HEAD
-
-    apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
-=======
     apply_B_transpose_inverse(dt,dx,nu,mspace,storage1,dW);
->>>>>>> 8c4cbe9f5d6842aa7ab820447148d99a57988b9b
     apply_C(dt,dx,nu,mspace,storage3,dW);
     apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
 
@@ -1175,6 +1170,29 @@ main(int argc, char *argv[])
 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
+
+
+   /********* Print out if converge or diverge *********/
+   double ***w = (app->w);
+   double check = w[1][0][1];
+   if(isinf(check)||isnan(check))
+   {
+    check=0;
+   }
+   else
+   {
+    check=1;
+   }
+
+   char    filename[255];
+   FILE   *file;
+   sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-newt.conv", ntime,mspace,nu,alpha,max_levels);
+   file = fopen(filename, "w");
+   fprintf(file, "%f", check);
+   fflush(file);
+   fclose(file);   
+
+   /****************************************************/
 
    dx = 1/((double)(mspace+1));;
    
