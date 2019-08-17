@@ -203,12 +203,42 @@ apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    double *bi = (double*) malloc( (M-1)*sizeof(double) );
    
    ai[0] = dx*dt;
-   for(int i=1; i<M-1; i++){
+   for(int i=1; i<=M-1; i++){
       bi[i-1] = g(dt,dx)*(u[i-1]-u[i]);
       li[i-1] = g(dt,dx)*(u[i-1]-u[i])/ai[i-1];
       ai[i] = dx*dt-g(dt,dx)*g(dt,dx)*(u[i-1]-u[i])*(u[i-1]-u[i])/ai[i-1];
    }
 
+   // bi[M-2] = g(dt,dx)*(u[M-2]-u[M-1]);
+   // li[M-2] = g(dt,dx)*(u[M-2]-u[M-1])/ai[M-1];
+
+   // printf("The in u vec is: \n");
+   // for(int i=0;i<M;i++)
+   // {
+   //  printf("%f\n", u[i]);
+   // }
+   // printf("\n\n\n");
+
+   // printf("The bi vec is:\n");
+   // for(int i=0;i<M-1;i++)
+   // {
+   //  printf("%f\n", bi[i]);
+   // }
+   // printf("\n\n\n");
+
+   // printf("The li vec is:\n");
+   // for(int i=0;i<M-1;i++)
+   // {
+   //  printf("%f\n", li[i]);
+   // }
+   // printf("\n\n\n");   
+
+   // printf("The ai vec is:\n");
+   // for(int i=0;i<M;i++)
+   // {
+   //  printf("%f\n", ai[i]);
+   // }
+   // printf("\n\n\n");      
 
    /* Solve Lw=u (Lw=f) */
    double *w;
@@ -385,7 +415,7 @@ find_gamma(double *u, int mspace){
 /*------------------------------------*/
 
 void
-apply_S(double dt, double dx, double alpha, double nu, int mspace, *w_old, *w, *u, *v){
+apply_S(double dt, double dx, double alpha, double nu, int mspace, double *w_old, double *w, double *u, double *v, int isNull){
   double *utmp;
   double *utmp2;
   vec_create(mspace, &utmp);
@@ -397,21 +427,39 @@ apply_S(double dt, double dx, double alpha, double nu, int mspace, *w_old, *w, *
   apply_B(dt, mspace, nu, utmp2, u);
   vec_scale(mspace, g(dt,dx), utmp2);
   vec_axpy(mspace, 1.0, utmp2, utmp);
+  // printf("utmp 1 \n");
+  // for(int i = 0; i < mspace; i++)
+  // {
+  //   printf("%f\n", w[i]);
+  // }    
+  // printf("\n\n\n");  
   
 
   apply_C_inverse(dt, dx, nu, mspace, w, utmp);
   vec_copy(mspace, utmp, utmp2);
+  // printf("utmp 2 \n");
+  // for(int i = 0; i < mspace; i++)
+  // {
+  //   printf("%f\n", utmp[i]);
+  // }    
+  // printf("\n\n\n");    
 
   apply_A(dt,dx,nu,mspace,utmp);
   apply_B(dt, mspace, nu, utmp2, u);
   vec_scale(mspace, g(dt,dx), utmp2);
   vec_axpy(mspace, 1.0, utmp2, utmp);
+  // printf("utmp 3 \n");
+  // for(int i = 0; i < mspace; i++)
+  // {
+  //   printf("%f\n", utmp[i]);
+  // }    
+  // printf("\n\n\n");    
 
   vec_copy(mspace, v, utmp2);
   vec_scale(mspace, dt/(alpha*dx), utmp2);
-  vec_axpy(mspace, utmp2, utmp);
+  vec_axpy(mspace, 1.0, utmp2, utmp);
 
-  if (w_old != NULL)
+  if (isNull == 0)
   {
     vec_copy(mspace, v, utmp2);
     apply_C_inverse(dt, dx, nu, mspace, w_old, utmp2);
@@ -597,7 +645,7 @@ my_TriSolve(braid_App       app,
 {
 
    double  t, tprev, tnext, dt, dx;
-   double *rhs, *utmp, *utmp2, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
+   double *rhs, *utmp, *utmp2, *W_old, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
    int mspace = (app->mspace);
    double nu = (app->nu);
    /*double *li = (app->li);
@@ -605,6 +653,7 @@ my_TriSolve(braid_App       app,
    double alpha = (app->alpha);
 
    double *dW, *dU, *dV, *storage1, *storage2, *storage3;
+   int isNull;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
@@ -629,9 +678,20 @@ my_TriSolve(braid_App       app,
    vec_create(mspace, &storage1);
    vec_create(mspace, &storage2);
    vec_create(mspace, &storage3);
+   vec_create(mspace, &W_old);
    vec_copy(mspace, (u->values)[0], storage1);
    vec_copy(mspace, (u->values)[1], storage2);
    vec_copy(mspace, (u->values)[2], storage3);
+   if(uleft==NULL)
+   {
+      vec_copy(mspace, storage1, W_old);
+      isNull=1;
+   }
+   if(uleft!=NULL)
+   {
+      vec_copy(mspace, (uleft->values)[2], W_old);
+      isNull=0;
+   }
    /* Create temporary vector */
    vec_create(mspace, &utmp);
    vec_create(mspace, &utmp2);
@@ -655,7 +715,7 @@ my_TriSolve(braid_App       app,
 
     vec_copy(mspace, r4, utmp);
     if(uleft!=NULL){
-      apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
+      apply_C_inverse(dt,dx,nu,mspace, storage3,utmp);
     }
     else{
       vec_scale(mspace,0.0,utmp);
@@ -681,8 +741,13 @@ my_TriSolve(braid_App       app,
 
     vec_axpy(mspace, -1.0, r3, dW);
 
+    // printf("The index is before loop: \n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dW[i]);
+    // }
 
-    /* Start the C^-1 iterations */ 
+    /******************** Start the C^-1 iterations ********************/ 
     vec_copy(mspace, dW, rhs);
     for(int i=0; i<mspace; i++) dW[i]=0.0;
     int numiters = (app->num_c_iters);
@@ -691,35 +756,29 @@ my_TriSolve(braid_App       app,
     {
       vec_copy(mspace, dW, utmp);
       vec_copy(mspace, dW, utmp2);
-      
-      /* First term in sum */
-      vec_copy(mspace, dW, utmp);
-      if(uleft!=NULL){
-        apply_C_inverse(dt,dx,nu,mspace,uleft->values[2],utmp);
-        vec_scale(mspace, -1.0, utmp);
-      }
-      else{
-        vec_scale(mspace,0.0,utmp);
-      }
 
-      vec_axpy(mspace, 1.0, rhs, utmp);/*update rhs*/
+      // for(int i = 0; i < mspace; i++)
+      // {
+      //   printf("%f\n", dW[i]);
+      // }    
+      // printf("\n\n\n");   
 
-      vec_copy(mspace, dW, utmp2);
-      vec_scale(mspace, -dt/(alpha*dx), utmp2);
-      vec_axpy(mspace, 1.0, utmp2, utmp);
+      apply_S(dt, dx, alpha, nu, mspace, W_old, storage3, storage1, dW, isNull);
 
-      vec_copy(mspace, utmp, dW);
+      // printf("The index is after apply_S: \n");
+      // for(int i = 0; i < mspace; i++)
+      // {
+      //   printf("%f\n", dW[i]);
+      // }    
+      // printf("\n\n\n");      
+
+      vec_axpy(mspace, -1.0, rhs, dW);
+      vec_scale(mspace, -1.0, dW);
 
       /* Apply C^-1 */
-      apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
       apply_C(dt,dx,nu,mspace,storage3,dW);
-      apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+      vec_axpy(mspace, 0.5, utmp, dW);
     }
-
-   //apply c_tilde inverse
-   //  apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
-   //  apply_C(dt,dx,nu,mspace,storage3,dW);
-   //  apply_B_inverse(dt,dx,nu,mspace,storage1,dW);    
 
     //update dU and dV based on dW
     //dV
@@ -755,6 +814,7 @@ my_TriSolve(braid_App       app,
    vec_destroy(storage1);
    vec_destroy(storage2);
    vec_destroy(storage3);
+   vec_destroy(W_old);
    vec_destroy(dU);
    vec_destroy(dV);
    vec_destroy(dW);

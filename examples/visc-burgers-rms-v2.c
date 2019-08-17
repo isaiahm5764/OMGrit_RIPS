@@ -1,45 +1,4 @@
-/*BHEADER**********************************************************************
- * Copyright (c) 2013, Lawrence Livermore National Security, LLC. 
- * Produced at the Lawrence Livermore National Laboratory. Written by 
- * Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin 
- * Dobrev, et al. LLNL-CODE-660355. All rights reserved.
- * 
- * This file is part of XBraid. For support, post issues to the XBraid Github page.
- * 
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License (as published by the Free Software
- * Foundation) version 2.1 dated February 1999.
- * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
- * License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc., 59
- * Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
- ***********************************************************************EHEADER*/
-
- /**
- * Example:       advec-diff-imp.c
- *
- * Interface:     C
- * 
- * Requires:      only C-language support     
- *
- * Compile with:  make advec-diff-imp
- *
- * Description:  Solves a simple optimal control problem in time-parallel:
- * 
- *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
- * 
- *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
- *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
- *
- *                 
- **/
+/*This version multiplies the Schur Complement system by H^(n-1) so that it's not dense*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -188,55 +147,6 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
    free(ai);
    free(li);
    free(bi);
-}
-
-void
-apply_B_transpose_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{   
-   /* Find LU decomposition */
-   double *ai = (double*) malloc( M*sizeof(double) );
-   double *li = (double*) malloc( (M-1)*sizeof(double) );
-   double *bi = (double*) malloc( (M-1)*sizeof(double) );
-   ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
-
-   for(int i=1; i<M-1; i++){
-      bi[i-1] = -b(dt,dx,nu)+g(dt,dx)*u[i-1];
-      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i])/ai[i-1];
-      ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
-   }
-   bi[M-2] = -b(dt,dx,nu)+g(dt,dx)*u[M-2];
-   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-1])/ai[M-2];
-   ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
-
-
-
-   /* Solve Lw=u (Lw=f) */
-   double *w;
-   vec_create(M, &w);
-   double *f;
-   vec_create(M, &f);
-   vec_copy(M, r, f);
-   w[0]=f[0];
-   for (int i = 1; i < M; i++)
-   {
-      w[i]=f[i]-li[i-1]*w[i-1];
-   }
-
-   /* Now solve Ux=w */ 
-   r[M-1]=w[M-1]/ai[M-1];
-   for (int i = M-2; i >= 0; i--)
-   {
-      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-   }
-
-   vec_destroy(w);
-   vec_destroy(f);
-   free(ai);
-   free(li);
-   free(bi);
-
-
-
 }
 
 void
@@ -410,19 +320,6 @@ apply_B(double dt, int mspace, double nu, double *u, double *uleft){
 }
 
 void 
-apply_B_transpose(double dt, int mspace, double nu, double *u, double *uleft){
-  double *tmp;
-  vec_create(mspace, &tmp);
-  vec_copy(mspace, u, tmp);
-  u[0] = uleft[1] * tmp[0] + uleft[0] * tmp[1];
-  for(int i=1; i<mspace-1; i++)
-  {
-    u[i] = -uleft[i]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  + uleft[i]*tmp[i+1];
-  }
-  u[mspace-1] = -uleft[mspace-1] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
-}
-
-void 
 find_gamma(double *u, int mspace){
   double *tmp;
   vec_create(mspace, &tmp);
@@ -439,6 +336,66 @@ find_gamma(double *u, int mspace){
 
 }
 
+/*------------------------------------*/
+
+void
+apply_B_transpose_inverse(double dt, double dx, double nu, int M, double *u, double *r)
+{   
+   /* Find LU decomposition */
+   double *ai = (double*) malloc( M*sizeof(double) );
+   double *li = (double*) malloc( (M-1)*sizeof(double) );
+   double *bi = (double*) malloc( (M-1)*sizeof(double) );
+   ai[0] = 1+2*b(dt,dx,nu)+g(dt,dx)*u[1];
+
+   for(int i=1; i<M-1; i++){
+      bi[i-1] = -b(dt,dx,nu)+g(dt,dx)*u[i-1];
+      li[i-1] = (-b(dt,dx,nu)-g(dt,dx)*u[i])/ai[i-1];
+      ai[i] = 1+2*b(dt,dx,nu)+g(dt,dx)*(u[i+1]-u[i-1])-bi[i-1]*li[i-1];
+   }
+   bi[M-2] = -b(dt,dx,nu)+g(dt,dx)*u[M-2];
+   li[M-2] = (-b(dt,dx,nu)-g(dt,dx)*u[M-1])/ai[M-2];
+   ai[M-1] = 1+2*b(dt,dx,nu)-g(dt,dx)*u[M-2]-bi[M-2]*li[M-2];
+
+
+
+   /* Solve Lw=u (Lw=f) */
+   double *w;
+   vec_create(M, &w);
+   double *f;
+   vec_create(M, &f);
+   vec_copy(M, r, f);
+   w[0]=f[0];
+   for (int i = 1; i < M; i++)
+   {
+      w[i]=f[i]-li[i-1]*w[i-1];
+   }
+
+   /* Now solve Ux=w */ 
+   r[M-1]=w[M-1]/ai[M-1];
+   for (int i = M-2; i >= 0; i--)
+   {
+      r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
+   }
+
+   vec_destroy(w);
+   vec_destroy(f);
+   free(ai);
+   free(li);
+   free(bi);
+}
+/*------------------------------------*/
+void 
+apply_B_transpose(double dt, int mspace, double nu, double *u, double *uleft){
+  double *tmp;
+  vec_create(mspace, &tmp);
+  vec_copy(mspace, u, tmp);
+  u[0] = uleft[1] * tmp[0] + uleft[0] * tmp[1];
+  for(int i=1; i<mspace-1; i++)
+  {
+    u[i] = -uleft[i]*tmp[i-1] + tmp[i] * (uleft[i+1] - uleft[i-1])  + uleft[i]*tmp[i+1];
+  }
+  u[mspace-1] = -uleft[mspace-1] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
+}
 /*------------------------------------*/
 
 /*--------------------------------------------------------------------------
@@ -563,6 +520,7 @@ my_TriResidual(braid_App       app,
    }
 
   else{
+   /* NEEDS TO BE DEALT WITH */
     vec_scale(mspace, 0.0, utmp);
     vec_copy(mspace, utmp, rtmp4);
   }
@@ -575,6 +533,9 @@ my_TriResidual(braid_App       app,
       vec_axpy(mspace, -1.0, (f->values[2]), rtmp3);
       vec_axpy(mspace, -1.0, (f->values[3]), rtmp4);
    }
+
+
+  /* Compute residual for U^n-1 equation */
 
 
    /* Copy temporary residual vector into residual */
@@ -609,14 +570,14 @@ my_TriSolve(braid_App       app,
 {
 
    double  t, tprev, tnext, dt, dx;
-   double *utmp, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
+   double *utmp, *utmp2, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
    int mspace = (app->mspace);
    double nu = (app->nu);
-   double *li = (app->li);
-   double *ai = (app->ai);
+   // double *li = (app->li);
+   // double *ai = (app->ai);
    double alpha = (app->alpha);
 
-   double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageW;
+   double *dW, *dU, *dV, *storage1, *storage2, *storage3, *W_old, *U_old;
    vec_create(mspace, &dW);
    vec_create(mspace, &dU);
    vec_create(mspace, &dV);
@@ -641,15 +602,20 @@ my_TriSolve(braid_App       app,
    vec_create(mspace, &storage1);
    vec_create(mspace, &storage2);
    vec_create(mspace, &storage3);
-   vec_create(mspace, &storageW);
+   vec_create(mspace, &W_old);
+   vec_create(mspace, &U_old);
    vec_copy(mspace, (u->values)[0], storage1);
    vec_copy(mspace, (u->values)[1], storage2);
    vec_copy(mspace, (u->values)[2], storage3);
-   if(uleft!=NULL){
-   vec_copy(mspace, (uleft->values)[2], storageW);
-    }
+   if(uleft!=NULL)
+   {
+      vec_copy(mspace, uleft->values[2], W_old);
+      vec_copy(mspace, uleft->values[0], U_old);
+   }
+
    /* Create temporary vector */
    vec_create(mspace, &utmp);
+   vec_create(mspace, &utmp2);
    vec_create(mspace, &r1);
    vec_create(mspace, &r2);
    vec_create(mspace, &r3);
@@ -662,42 +628,78 @@ my_TriSolve(braid_App       app,
    vec_copy(mspace, u->values[0], r1);
    vec_copy(mspace, u->values[1], r2);
    vec_copy(mspace, u->values[2], r3);
-   vec_copy(mspace, u->values[3], r4);
+   vec_copy(mspace, u->values[3], r4);   
 
    /*solve for deltaW*/
 
+    /******* This part of the function uses r4 only *******/
     vec_copy(mspace, r4, utmp);
     if(uleft!=NULL){
-      apply_C_inverse(dt,dx,nu,mspace,storageW,utmp);
+      vec_axpy(mspace, -1.0, utmp, dW);
     }
     else{
       vec_scale(mspace,0.0,utmp);
     }
+    
+    /*******                                       *******/
 
-    vec_axpy(mspace, -1.0, utmp, dW);
-
+    /* Compute the r1 term */
     vec_copy(mspace, r1, utmp);
     apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
+    vec_copy(mspace, utmp, utmp2);
     apply_B_transpose(dt,mspace,nu,utmp,storage1);
-    if(uleft!=NULL){
-      vec_axpy(mspace, g(dt,dx), utmp, dW);
-    }else{
-      vec_axpy(mspace, 1.0, utmp, dW);
+    vec_scale(mspace, g(dt,dx), utmp);
+    apply_A(dt,dx,nu,mspace,utmp2);
+    vec_axpy(mspace, 1.0, utmp2, utmp);
+    if(uleft!=NULL)
+    {
+      apply_C(dt, dx, nu, mspace, W_old, utmp);  
     }
-
-    vec_copy(mspace, r1, utmp);
-    apply_C_inverse(dt,dx,nu,mspace,storage3,utmp);
-    apply_A(dt,dx,nu,mspace,utmp);
     vec_axpy(mspace, 1.0, utmp, dW);
 
-    vec_axpy(mspace, -1.0/(alpha*dx), r2, dW);
+    /* Compute the r2 term */
+    vec_copy(mspace, r2, utmp);
+    vec_scale(mspace, -1.0/(alpha*dx), utmp);
+    if(uleft!=NULL)
+    {
+      apply_C(dt, dx, nu, mspace, W_old, utmp);  
+    }
+    vec_axpy(mspace, 1.0, utmp, dW);
 
-    vec_axpy(mspace, -1.0, r3, dW);
+    /* Compute the r3 term */
+    vec_copy(mspace, r3, utmp);
+    if(uleft!=NULL)
+    {
+      apply_C(dt, dx, nu, mspace, W_old, utmp);   
+    }
+    vec_axpy(mspace, -1.0, utmp, dW);
 
-   //apply c_tilde inverse
+    /*******************************************/
+    // printf("The RHS before C_Tilde is:\n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dW[i]);
+    // }
+    /*******************************************/
+
+   //apply C_tilde inverse
+    if(uleft!=NULL)
+    {
+      //printf("Uleft is not null:\n");
+      apply_C(dt, dx, nu, mspace, W_old, dW); 
+    }    
     apply_B_transpose_inverse(dt,dx,nu,mspace,storage1,dW);
     apply_C(dt,dx,nu,mspace,storage3,dW);
     apply_B_inverse(dt,dx,nu,mspace,storage1,dW);
+
+    /*******************************************/
+    // printf("The RHS after the inverse is:\n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dW[i]);
+    // }    
+    // printf("\n\n\n");
+    /*******************************************/
 
     //update dU and dV based on dW
     //dV
@@ -713,7 +715,47 @@ my_TriSolve(braid_App       app,
     apply_Aadjoint(dt,dx,nu,mspace,utmp);
     vec_axpy(mspace,-1.0, utmp,dU);
     apply_C_inverse(dt,dx,nu,mspace,storage3,dU);
+    //dU_old Update
+    // if(uleft!=NULL)
+    // {
+    //   vec_copy(mspace, r4, utmp);
+    //   vec_axpy(mspace, 1.0, dW, utmp);
+    //   apply_C_inverse(dt, dx, nu, mspace, W_old, utmp);
 
+    //   vec_axpy(mspace, -1.0, utmp, U_old);
+    //   vec_copy(mspace, U_old, u->values[3]);
+
+    //   // printf("The dU_old is:\n");
+    //   // for(int i = 0; i < mspace; i++)
+    //   // {
+    //   //   printf("%f\n", utmp[i]);
+    //   // }    
+    //   // printf("\n");       
+    // }
+
+    /*******************************************/
+    // printf("The dW is:\n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dW[i]);
+    // }
+    // printf("\n");    
+
+    // printf("The dU is:\n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dU[i]);
+    // }  
+    // printf("\n");  
+
+    // printf("The dV is:\n");
+    // for(int i = 0; i < mspace; i++)
+    // {
+    //   printf("%f\n", dV[i]);
+    // }
+
+    // printf("\n\n\n");    
+    /*******************************************/
 
    /* Complete update of solution */
    vec_axpy(mspace, -1.0, dU, storage1);
@@ -729,12 +771,15 @@ my_TriSolve(braid_App       app,
    vec_destroy(r3);
    vec_destroy(r4);
    vec_destroy(utmp);
+   vec_destroy(utmp2);
    vec_destroy(storage1);
    vec_destroy(storage2);
    vec_destroy(storage3);
    vec_destroy(dU);
    vec_destroy(dV);
    vec_destroy(dW);
+   vec_destroy(W_old);
+   vec_destroy(U_old);
 
    
    /* no refinement */
@@ -764,9 +809,9 @@ my_Init(braid_App     app,
 
    for (int i = 0; i <= mspace-1; i++)
    {
-      u->values[0][i] = 0.5;
-      u->values[1][i] = 2.0;
-      u->values[2][i] = 0.001;
+      u->values[0][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[1][i] = ((double)braid_Rand())/braid_RAND_MAX;
+      u->values[2][i] = ((double)braid_Rand())/braid_RAND_MAX;
       u->values[3][i] = ((double)braid_Rand())/braid_RAND_MAX;
    }
 
