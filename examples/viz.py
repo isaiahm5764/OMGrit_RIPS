@@ -11,10 +11,7 @@ def retrieve_data(file_stem, var, vec, step):
     data is associated with. vec, a 2D list to
     store data. step, an integer denoting subsection
     of data is being retrieved
-<<<<<<< HEAD
-=======
 
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
     Output: vec, a 2D list containing solution data
     """
     fname = file_stem  + var + ".%03d"%step
@@ -22,7 +19,6 @@ def retrieve_data(file_stem, var, vec, step):
     with open(fname) as f:
         lines = f.readlines()
         for line in lines:
-
             index = int(line[:5]) - 1
             line = line[6:]
             split = line.split(',')
@@ -153,11 +149,8 @@ for line in lines:
     split = line.split(',')
 mspace=len(split)
 if nsteps == None: # estimate nsteps if user did not define
-<<<<<<< HEAD
-    nsteps=len(lines)*num_procs + 1
-=======
     nsteps=len(lines)*num_procs
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
+
 
 # Create the time and space meshes
 tmesh = linspace(start_t,end_t,nsteps)
@@ -178,11 +171,7 @@ count=1
 state_vec[0,0] = left_bound
 state_vec[0,mspace+1] = right_bound
 for thing in split:
-<<<<<<< HEAD
-    state_vec[0,count]=float(split[count-1])
-=======
     state_vec[0,count]=float(thing)
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
     count+=1
 
 # Retrieves solutions of u, v, and w for each processor
@@ -191,10 +180,6 @@ for step in range(0,num_procs):
     control_vec = retrieve_data(file_stem, 'v', control_vec, step)
     adjoint_vec = retrieve_data(file_stem, 'w', adjoint_vec, step)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
 import numpy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
