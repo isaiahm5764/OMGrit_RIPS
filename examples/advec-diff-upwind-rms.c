@@ -19,15 +19,15 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-imp.c
+ * Example:       advec-diff-upwind-rms.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make advec-diff-imp
+ * Compile with:  make advec-diff-upwind-rms
  *
- * Description:  Solves a simple optimal control problem in time-parallel:
+ * Description:  Solves a linear optimal control problem in time-parallel:
  * 
  *                 min   0.5\int_0^T \int_0^1 (u(x,t)-u0(x))^2+alpha v(x,t)^2 dxdt
  * 
@@ -600,7 +600,7 @@ my_Clone(braid_App     app,
   for(int i=0; i<4; i++) v->values[i] = (double *) malloc(mspace * sizeof(double));
 
   /* Clone the values */
-  for (int i = 0; i<= mspace-1; i++)
+  for (int i = 0; i <= mspace-1; i++)
   {
     v->values[0][i] = u->values[0][i];
     v->values[1][i] = u->values[1][i];
@@ -687,7 +687,7 @@ my_Access(braid_App          app,
       braid_AccessStatusGetNTPoints(astatus, &ntpoints);
       ntpoints++;  /* ntpoints is really the gupper index */
       (app->w) = (double ***)malloc(ntpoints*sizeof(double**));
-      for (i = 0; i< ntpoints; i++)
+      for (i = 0; i < ntpoints; i++)
       {
         app->w[i] = (double **) malloc(3*sizeof(double *));
         for (j = 0; j < 3; j++)
@@ -732,7 +732,7 @@ my_BufPack(braid_App           app,
   int i;
   int mspace = (app->mspace); 
 
-  for(i = 0; i <mspace; i++)
+  for(i = 0; i < mspace; i++)
   {
     dbuffer[i] = (u->values)[0][i];
     dbuffer[mspace + i] = (u->values)[1][i];
@@ -917,7 +917,6 @@ main(int argc, char *argv[])
     }
   }
 
-
   /* Define the space step */
   dx=(double)1/(mspace+1);
 
@@ -937,7 +936,8 @@ main(int argc, char *argv[])
 
   /* Set this to u0 in problem formulation */
   double *U0 = (double*) malloc( ntime*sizeof(double) );
-  for(int i=0; i<mspace/2; i++){
+  for(int i=0; i<mspace/2; i++)
+  {
     U0[i]=1;
   }
 
@@ -952,7 +952,8 @@ main(int argc, char *argv[])
   double *ai = (double*) malloc( mspace*sizeof(double) );
   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
   ai[0] = 1+g(dt,dx)+2*b(dt,dx,nu);
-  for(int i=1; i<mspace; i++){
+  for(int i=1; i<mspace; i++)
+  {
     li[i-1] = -(b(dt,dx,nu)+g(dt,dx))/ai[i-1];
     ai[i] = ai[0]+b(dt,dx,nu)*li[i-1];
   }
@@ -984,117 +985,120 @@ main(int argc, char *argv[])
 
   dx = 1/((double)(mspace+1));;
 
+  /* Writes final solution to files */
   if (access_level > 0)
   {
-    /* Print adjoint w to file */
+    char  filename[255];
+    FILE *file;
+    int   i,j,index;
+
+    /* Compute state u from adjoint w and print to file */
+    sprintf(filename, "%s.%03d", "out/advec-diff-upwind-rms.out.u", (app->myid));
+    file = fopen(filename, "w");
+    for (i = 0; i < (app->npoints); i++)
     {
-      char  filename[255];
-      FILE *file;
-      int   i,j,index;
-
-      sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.u", (app->myid));
-      file = fopen(filename, "w");
-      for (i = 0; i < (app->npoints); i++)
+      double ***w = (app->w);
+      index = (app->ilower) + i +1;
+      fprintf(file, "%05d: ", index);
+      for(j=0; j <mspace; j++)
       {
-        double ***w = (app->w);
-        index = (app->ilower) + i +1;
-        fprintf(file, "%05d: ", index);
-        for(j=0; j <mspace; j++)
+        if(j==mspace-1)
         {
-          if(j==mspace-1)
-          {
-            fprintf(file, "% 1.14e", w[i][0][j]);
-          }
-          else
-          {
-            fprintf(file, "% 1.14e, ", w[i][0][j]);
-          }
-        }
-        fprintf(file, "\n");
-      }
-      fflush(file);
-      fclose(file);
-
-      char filename1[255]; 
-      double *us;
-
-      sprintf(filename1, "%s.%03d", "out/advec-diff-rms.out.u0", (app->myid));
-      file = fopen(filename1, "w");
-      vec_create(mspace, &us);
-      vec_copy(mspace, U0, us);
-      for (j = 0; j < mspace; j++)
-      {
-        if(j!=mspace-1)
-        {
-          fprintf(file, "% 1.14e, ", us[j]);
+          fprintf(file, "% 1.14e", w[i][0][j]);
         }
         else
         {
-          fprintf(file, "% 1.14e", us[j]);
+          fprintf(file, "% 1.14e, ", w[i][0][j]);
         }
       }
-      vec_destroy(us);
-
-      sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.v", (app->myid));
-      file = fopen(filename, "w");
-      for (i = 0; i < (app->npoints); i++)
-      {
-        double ***w = (app->w);
-        index = (app->ilower) + i +1;
-        fprintf(file, "%05d: ", index);
-        for(j=0; j <mspace; j++)
-        {
-          if(j==mspace-1)
-          {
-            fprintf(file, "% 1.14e", w[i][1][j]);
-          }
-          else
-          {
-            fprintf(file, "% 1.14e, ", w[i][1][j]);
-          }
-        }
-        fprintf(file, "\n");
-      }
-      fflush(file);
-      fclose(file);
-
-      sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.w", (app->myid));
-      file = fopen(filename, "w");
-      for (i = 0; i < (app->npoints); i++)
-      {
-        double ***w = (app->w);
-        index = (app->ilower) + i +1;
-        fprintf(file, "%05d: ", index);
-        for(j=0; j <mspace; j++)
-        {
-          if(j==mspace-1)
-          {
-            fprintf(file, "% 1.14e", w[i][2][j]);
-          }
-          else
-          {
-            fprintf(file, "% 1.14e, ", w[i][2][j]);
-          }
-        }
-        fprintf(file, "\n");
-      }
-      fflush(file);
-      fclose(file);
+      fprintf(file, "\n");
     }
-      
-    end=clock();
-    time = (double)(end-start)/CLOCKS_PER_SEC;
-    printf("Total Run Time: %f s \n", time);
+    fflush(file);
+    fclose(file);
+
+    char filename1[255]; 
+    double *us;
+
+    sprintf(filename1, "%s.%03d", "out/advec-diff-upwind-rms.out.u0", (app->myid));
+    file = fopen(filename1, "w");
+    vec_create(mspace, &us);
+    vec_copy(mspace, U0, us);
+    for (j = 0; j < mspace; j++)
     {
-      char    filename[255];
-      FILE   *file;
-      sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
-      file = fopen(filename, "w");
-      fprintf(file, "%f", time);
-      fflush(file);
-      fclose(file);
+      if(j!=mspace-1)
+      {
+        fprintf(file, "% 1.14e, ", us[j]);
+      }
+      else
+      {
+        fprintf(file, "% 1.14e", us[j]);
+      }
     }
+    vec_destroy(us);
+
+    /* Compute control v from adjoint w and print to file */
+    sprintf(filename, "%s.%03d", "out/advec-diff-upwind-rms.out.v", (app->myid));
+    file = fopen(filename, "w");
+    for (i = 0; i < (app->npoints); i++)
+    {
+      double ***w = (app->w);
+      index = (app->ilower) + i +1;
+      fprintf(file, "%05d: ", index);
+      for(j=0; j <mspace; j++)
+      {
+        if(j==mspace-1)
+        {
+          fprintf(file, "% 1.14e", w[i][1][j]);
+        }
+        else
+        {
+          fprintf(file, "% 1.14e, ", w[i][1][j]);
+        }
+      }
+      fprintf(file, "\n");
+    }
+    fflush(file);
+    fclose(file);
+
+    /* Print adjoint w to file */
+    sprintf(filename, "%s.%03d", "out/advec-diff-upwind-rms.out.w", (app->myid));
+    file = fopen(filename, "w");
+    for (i = 0; i < (app->npoints); i++)
+    {
+      double ***w = (app->w);
+      index = (app->ilower) + i +1;
+      fprintf(file, "%05d: ", index);
+      for(j=0; j <mspace; j++)
+      {
+        if(j==mspace-1)
+        {
+          fprintf(file, "% 1.14e", w[i][2][j]);
+        }
+        else
+        {
+          fprintf(file, "% 1.14e, ", w[i][2][j]);
+        }
+      }
+      fprintf(file, "\n");
+    }
+    fflush(file);
+    fclose(file);
   }
+
+  /* Print runtime to file */
+  end=clock();
+  time = (double)(end-start)/CLOCKS_PER_SEC;
+  printf("Total Run Time: %f s \n", time);
+  {
+    char    filename[255];
+    FILE   *file;
+    sprintf(filename, "%s.%d", "out/advec-diff-upwind-rms.time", ntime);
+    file = fopen(filename, "w");
+    fprintf(file, "%f", time);
+    fflush(file);
+    fclose(file);
+  }
+  
   free(app);
    
   braid_Destroy(core);
