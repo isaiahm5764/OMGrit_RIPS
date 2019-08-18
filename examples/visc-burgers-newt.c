@@ -619,8 +619,8 @@ my_TriSolve(braid_App       app,
    double *utmp, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
    int mspace = (app->mspace);
    double nu = (app->nu);
-   double *li = (app->li);
-   double *ai = (app->ai);
+   //double *li = (app->li);
+   ///double *ai = (app->ai);
    double alpha = (app->alpha);
 
    double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageW;
@@ -717,6 +717,7 @@ my_TriSolve(braid_App       app,
    vec_destroy(storage1);
    vec_destroy(storage2);
    vec_destroy(storage3);
+   vec_destroy(storageW);
    vec_destroy(dU);
    vec_destroy(dV);
    vec_destroy(dW);
@@ -1169,7 +1170,9 @@ main(int argc, char *argv[])
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
+   printf("Implicit\n");
    braid_Drive(core);
+   end=clock();
 
 
    /********* Print out if converge or diverge *********/
@@ -1205,7 +1208,7 @@ main(int argc, char *argv[])
          FILE *file;
          int   i,j,index;
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "out/visc-burgers-newt.out.u", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->npoints); i++)
          {
@@ -1229,7 +1232,7 @@ main(int argc, char *argv[])
 
          double *us;
 
-         sprintf(filename1, "%s.%03d", "out/advec-diff-rms.out.u0", (app->myid));
+         sprintf(filename1, "%s.%03d", "out/visc-burgers-newt.out.u0", (app->myid));
          file = fopen(filename1, "w");
          vec_create(mspace, &us);
          vec_copy(mspace, U0, us);
@@ -1244,7 +1247,7 @@ main(int argc, char *argv[])
             }
          vec_destroy(us);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "out/visc-burgers-newt.out.v", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->npoints); i++)
          {
@@ -1264,7 +1267,7 @@ main(int argc, char *argv[])
          fflush(file);
          fclose(file);
 
-         sprintf(filename, "%s.%03d", "out/advec-diff-rms.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "out/visc-burgers-newt.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->npoints); i++)
          {
@@ -1285,13 +1288,13 @@ main(int argc, char *argv[])
          fclose(file);
       }
       
-      end=clock();
+      
          time = (double)(end-start)/CLOCKS_PER_SEC;
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
             FILE   *file;
-            sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
+            sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-newt.time", ntime,mspace,nu,alpha,max_levels);
             file = fopen(filename, "w");
             fprintf(file, "%f", time);
             fflush(file);

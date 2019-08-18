@@ -1,0 +1,4 @@
+ntime, mspace, nu, alpha, max levels, conv/div:64, 26, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 30, 0.050000, 0.500000, 3, 0.000000
+

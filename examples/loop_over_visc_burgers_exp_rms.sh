@@ -16,7 +16,7 @@ for t in "${time[@]}"
 				do
 					for m in "${ml[@]}"
 					do
-						mpirun -np 1 /home/local/IPAMNET/imeyers/OMGrit_RIPS/examples/visc-burgers-newt -mi 200 -ntime $t -mspace $s -nu $n -alpha $a -ml $m	
+						mpirun -np 1 /home/local/IPAMNET/imeyers/OMGrit_RIPS/examples/visc-burgers-exp-rms -mi 200 -ntime $t -mspace $s -nu $n -alpha $a -ml $m	
 					done
 				done
 			done

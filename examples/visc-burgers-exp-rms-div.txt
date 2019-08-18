@@ -1,0 +1,60 @@
+ntime, mspace, nu, alpha, max levels, conv/div:64, 12, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 14, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 14, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 16, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 16, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 18, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 18, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 20, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 20, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 22, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 22, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 26, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 26, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 30, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:64, 30, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 14, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 16, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 18, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 20, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 20, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 22, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 22, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 26, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 26, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 30, 0.050000, 0.500000, 2, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 30, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 20, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 22, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 26, 0.050000, 0.500000, 3, 0.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 30, 0.050000, 0.500000, 3, 0.000000
+

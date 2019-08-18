@@ -526,8 +526,8 @@ my_TriSolve(braid_App       app,
    double *utmp, *utmp2, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
    int mspace = (app->mspace);
    double nu = (app->nu);
-   double *li = (app->li);
-   double *ai = (app->ai);
+   //double *li = (app->li);
+   //double *ai = (app->ai);
    double alpha = (app->alpha);
 
    double *dW, *dU, *dV, *storage1, *storage2, *storage3, *storageU;
@@ -1077,7 +1077,31 @@ main(int argc, char *argv[])
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
+   printf("Explicit\n");
    braid_Drive(core);
+   end=clock();
+
+   /********* Print out if converge or diverge *********/
+   double ***w = (app->w);
+   double check = w[1][0][1];
+   if(isinf(check)||isnan(check))
+   {
+    check=0;
+   }
+   else
+   {
+    check=1;
+   }
+
+   char    filename[255];
+   FILE   *file;
+   sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-exp-rms.conv", ntime,mspace,nu,alpha,max_levels);
+   file = fopen(filename, "w");
+   fprintf(file, "%f", check);
+   fflush(file);
+   fclose(file);   
+
+   /****************************************************/   
 
    dx = 1/((double)(mspace+1));;
    
@@ -1170,13 +1194,13 @@ main(int argc, char *argv[])
          fclose(file);
       }
       
-      end=clock();
+      
          time = (double)(end-start)/CLOCKS_PER_SEC;
          printf("Total Run Time: %f s \n", time);
          {
             char    filename[255];
             FILE   *file;
-            sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
+            sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-exp-rms.time", ntime,mspace,nu,alpha,max_levels);
             file = fopen(filename, "w");
             fprintf(file, "%f", time);
             fflush(file);

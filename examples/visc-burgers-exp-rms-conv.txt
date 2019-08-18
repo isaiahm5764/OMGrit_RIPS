@@ -1,0 +1,164 @@
+ntime, mspace, nu, alpha, max levels, conv/div:64, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:128, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 14, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 16, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 18, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 20, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 22, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 26, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:256, 30, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 14, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 16, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 18, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 20, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 20, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 22, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 22, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 26, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 26, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 30, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:512, 30, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 14, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 16, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 18, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 20, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 20, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 22, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 22, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 26, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 26, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 30, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:1024, 30, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 14, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 16, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 18, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 20, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 20, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 22, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 22, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 26, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 26, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 30, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:2048, 30, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 12, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 12, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 14, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 14, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 16, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 16, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 18, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 18, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 20, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 20, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 22, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 22, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 26, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 26, 0.050000, 0.500000, 3, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 30, 0.050000, 0.500000, 2, 1.000000
+
+ntime, mspace, nu, alpha, max levels, conv/div:4096, 30, 0.050000, 0.500000, 3, 1.000000
+
