@@ -62,7 +62,7 @@ typedef struct _braid_App_struct
   int      mspace;      /* Number of space points included in our state vector */
                         /* So including boundaries we have M+2 space points */
 
-  double ***w;          /* Vectors (ui, xi, wi) at each time point (each of these have their own mspace points) */
+  double ***w;          /* Vectors (ui, vi, wi) at each time point (each of these have their own mspace points) */
   double *U0;
   double *ai;
   double *li;
@@ -329,7 +329,7 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 
 /*------------------------------------*/
 
-//applies the B matrix but may use previous time steps (not sure which works) uleft is just the u vector that is in that gamma nonlinear term
+//applies the B matrix but may use previous time steps. uleft is just the u vector that is in the gamma nonlinear term
 void 
 apply_B(double dt, int mspace, double nu, double *u, double *uleft)
 {
@@ -379,7 +379,7 @@ my_TriResidual(braid_App       app,
 {
   double  t, tprev, tnext, dt, dx;
   double  alpha = (app->alpha);
-  double *rtmp,*rtmp2,*rtmp3,*rtmp4, *utmp, *utmp2;
+  double *rtmp,*rtmp2,*rtmp3, *utmp, *utmp2;
   int     level, index;
   int     mspace = (app->mspace);
   double *u0 = (app->U0);
@@ -408,11 +408,10 @@ my_TriResidual(braid_App       app,
   vec_create(mspace, &rtmp);
   vec_create(mspace, &rtmp2);
   vec_create(mspace, &rtmp3);
-  vec_create(mspace, &rtmp4);
   vec_create(mspace, &utmp);
   vec_create(mspace, &utmp2);
 
-  /* Compute residual on second row*/   
+  /* Compute residual on first row*/   
   vec_copy(mspace, r->values[0], rtmp);
   vec_scale(mspace, dx*dt, rtmp);
   vec_axpy(mspace, -dx*dt, u0, rtmp);
@@ -431,13 +430,13 @@ my_TriResidual(braid_App       app,
   }
 
 
-  /* Compute residual on third row*/
+  /* Compute residual on second row*/
   vec_copy(mspace, r->values[1],rtmp2);
   vec_scale(mspace, alpha*dx*dt, rtmp2);
   vec_axpy(mspace, -dt, r->values[2], rtmp2);
 
 
-  /* Compute residual on fourth row*/
+  /* Compute residual on third row*/
   vec_copy(mspace, r->values[0], rtmp3);
   if(uleft!=NULL)
   {
@@ -459,15 +458,13 @@ my_TriResidual(braid_App       app,
   }
   vec_axpy(mspace, -dt, r->values[1], rtmp3);
 
-   
-  /* Compute residual on first row*/
+  /* FAS */
   if (f != NULL)
   {
     /* rtmp = rtmp - f */
     vec_axpy(mspace, -1.0, (f->values[0]), rtmp);
     vec_axpy(mspace, -1.0, (f->values[1]), rtmp2);
     vec_axpy(mspace, -1.0, (f->values[2]), rtmp3);
-    vec_axpy(mspace, -1.0, (f->values[3]), rtmp4);
   }
 
 
@@ -475,13 +472,11 @@ my_TriResidual(braid_App       app,
   vec_copy(mspace, rtmp, (r->values[0]));
   vec_copy(mspace, rtmp2, (r->values[1]));
   vec_copy(mspace, rtmp3, (r->values[2]));
-  vec_copy(mspace, rtmp4, (r->values[3]));
    
   /* Destroy temporary vectors */
   vec_destroy(rtmp);
   vec_destroy(rtmp2);
   vec_destroy(rtmp3);
-  vec_destroy(rtmp4);
   vec_destroy(utmp);
   vec_destroy(utmp2);
    
@@ -503,7 +498,7 @@ my_TriSolve(braid_App       app,
 {
 
    double  t, tprev, tnext, dt, dx;
-   double *utmp, *utmp2, *r1, *r2, *r3, *r4 /*r4 corresponds to residual for u^n-1*/;
+   double *utmp, *utmp2, *r1, *r2, *r3;
    int mspace = (app->mspace);
    double nu = (app->nu);
    //double *li = (app->li);
@@ -533,7 +528,6 @@ my_TriSolve(braid_App       app,
 
   /* Get the space-step size */
   dx = 1/((double)(mspace+1));
-  double l = dt/(4*dx);
   vec_create(mspace, &storage1);
   vec_create(mspace, &storage2);
   vec_create(mspace, &storage3);
@@ -546,13 +540,12 @@ my_TriSolve(braid_App       app,
     vec_copy(mspace, uleft->values[0], storageU);
   }
 
-  /* Create temporary vector */
+  /* Create temporary vectors */
   vec_create(mspace, &utmp);
   vec_create(mspace, &utmp2);
   vec_create(mspace, &r1);
   vec_create(mspace, &r2);
   vec_create(mspace, &r3);
-  vec_create(mspace, &r4);
 
   //call our residual routine
   my_TriResidual(app, uleft, uright, f, u, homogeneous, status);
@@ -561,7 +554,6 @@ my_TriSolve(braid_App       app,
   vec_copy(mspace, u->values[0], r1);
   vec_copy(mspace, u->values[1], r2);
   vec_copy(mspace, u->values[2], r3);
-  vec_copy(mspace, u->values[3], r4);
 
   /*solve for deltaW*/
   vec_copy(mspace,r1,dW);
@@ -596,14 +588,15 @@ my_TriSolve(braid_App       app,
   vec_axpy(mspace, -1.0, dV, storage2);
   vec_axpy(mspace, -1.0, dW, storage3);
 
+  /* Copy solution back into u */
   vec_copy(mspace, storage1, u->values[0]);
   vec_copy(mspace, storage2, u->values[1]);
   vec_copy(mspace, storage3, u->values[2]);
  
+  /* Destroy temporary vectors */
   vec_destroy(r1);
   vec_destroy(r2);
   vec_destroy(r3);
-  vec_destroy(r4);
   vec_destroy(utmp);
   vec_destroy(storage1);
   vec_destroy(storage2);
@@ -633,15 +626,15 @@ my_Init(braid_App     app,
   my_Vector *u;
   u= (my_Vector *) malloc(sizeof(my_Vector));
   //one extra component allocated for residual containing 4 entries
-  u->values = (double**) malloc(4*sizeof(double*) );
-  for(int i=0; i<4; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
+  u->values = (double**) malloc(3*sizeof(double*) );
+  for(int i=0; i<3; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
 
+  /* Start with random initial guesses for ui, vi, and wi*/  
   for (int i = 0; i <= mspace-1; i++)
   {
     u->values[0][i] = ((double)braid_Rand())/braid_RAND_MAX;
     u->values[1][i] = ((double)braid_Rand())/braid_RAND_MAX;
     u->values[2][i] = ((double)braid_Rand())/braid_RAND_MAX;
-    u->values[3][i] = ((double)braid_Rand())/braid_RAND_MAX;
   }
 
   *u_ptr = u;
@@ -661,9 +654,9 @@ my_Clone(braid_App     app,
 
   /* Allocate the vector */
   v = (my_Vector *) malloc(sizeof(my_Vector));
-  //one extra component allocated for residual containing 4 entries
-  v->values = (double**) malloc(4*sizeof(double*) );
-  for(int i=0; i<4; i++) v->values[i] = (double *) malloc(mspace * sizeof(double));
+
+  v->values = (double**) malloc(3*sizeof(double*) );
+  for(int i=0; i<3; i++) v->values[i] = (double *) malloc(mspace * sizeof(double));
 
   /* Clone the values */
   for (int i = 0; i <= mspace-1; i++)
@@ -671,7 +664,6 @@ my_Clone(braid_App     app,
     v->values[0][i] = u->values[0][i];
     v->values[1][i] = u->values[1][i];
     v->values[2][i] = u->values[2][i];
-    v->values[3][i] = u->values[3][i];
   }
 
   *v_ptr = v;
@@ -706,7 +698,6 @@ my_Sum(braid_App     app,
     (y->values)[0][i] = alpha*(x->values)[0][i] + beta*(y->values)[0][i];
     (y->values)[1][i] = alpha*(x->values)[1][i] + beta*(y->values)[1][i];
     (y->values)[2][i] = alpha*(x->values)[2][i] + beta*(y->values)[2][i];
-    (y->values)[3][i] = alpha*(x->values)[3][i] + beta*(y->values)[3][i];
   }
 
   return 0;
@@ -786,7 +777,7 @@ my_BufSize(braid_App           app,
            braid_BufferStatus  bstatus)
 {
   int mspace = app->mspace;
-  *size_ptr = mspace*4*sizeof(double);
+  *size_ptr = mspace*3*sizeof(double);
   return 0;
 }
 
@@ -807,10 +798,9 @@ my_BufPack(braid_App           app,
     dbuffer[i] = (u->values)[0][i];
     dbuffer[mspace + i] = (u->values)[1][i];
     dbuffer[2*mspace + i] = (u->values)[2][i];
-    dbuffer[3*mspace + i] = (u->values)[3][i];
   }
 
-  braid_BufferStatusSetSize( bstatus,  mspace*4*sizeof(double));
+  braid_BufferStatusSetSize( bstatus,  mspace*3*sizeof(double));
 
   return 0;
 }
@@ -830,8 +820,8 @@ my_BufUnpack(braid_App           app,
   /* Allocate memory */
   u= (my_Vector *) malloc(sizeof(my_Vector));
   //one extra component allocated for residual containing 4 entries
-  u->values = (double**) malloc(4*sizeof(double*) );
-  for(int i=0; i<4; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
+  u->values = (double**) malloc(3*sizeof(double*) );
+  for(int i=0; i<3; i++) u->values[i] = (double *) malloc(mspace * sizeof(double));
 
   /* Unpack the buffer */
   for(i = 0; i < mspace; i++)
@@ -839,7 +829,6 @@ my_BufUnpack(braid_App           app,
     (u->values)[0][i] = dbuffer[i];
     (u->values)[1][i] = dbuffer[mspace+i];
     (u->values)[2][i] = dbuffer[2*mspace+i];
-    (u->values)[3][i] = dbuffer[3*mspace+i];
   }
 
   *u_ptr = u;
@@ -870,11 +859,11 @@ main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-  mspace = 4;
-  ntime = 512;
+  mspace = 16;
+  ntime = 256;
 
   /* Define some optimization parameters */
-  alpha = .005;            /* parameter in the objective function */
+  alpha = .1;            /* parameter in the objective function */
   nu    = .1;              /* parameter in PDE */
 
   /* Define some Braid parameters */

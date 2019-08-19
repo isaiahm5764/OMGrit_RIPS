@@ -53,6 +53,7 @@
 
 void 
 take_step(double* u,         /* state at current time */
+          double *uleft,
           double  *design,    /* design at current time */
           double  deltaT,
           int mspace,
@@ -76,12 +77,12 @@ take_step(double* u,         /* state at current time */
    
    for (int i = 1; i <= mspace - 2; i++)
    {
-     u[i] = A*u[i-1] + B*u[i] + C*u[i+1] + design[i];
+     u[i] = A*u[i-1] + B*u[i] + C*u[i+1] + deltaT*design[i] -uleft[i];
    }
    
    /* Deal with the u_1 and u_M vectors seperately */
-   u[0] = B*tmp_u_1 + C*tmp_u_2 + design[0];
-   u[mspace-1] = A*tmp_u_Mm1 + B*tmp_u_M + design[mspace-1];
+   u[0] = B*tmp_u_1 + C*tmp_u_2 + deltaT*design[0] -uleft[i];
+   u[mspace-1] = A*tmp_u_Mm1 + B*tmp_u_M + deltaT*design[mspace-1] -uleft[i];
 
 }
 
