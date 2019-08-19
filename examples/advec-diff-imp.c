@@ -902,137 +902,137 @@ main(int argc, char *argv[])
 
    dx = 1/((double)(mspace+1));;
    
-   /* Writes final solution to files */
-   if (access_level > 0)
-   {
-      char  filename[255];
-      FILE *file;
-      int   i,j, index;
+    /* Writes solutions to files */  
+    if (access_level > 0)
+    {
+        /* Print adjoint w to file */
+        char  filename[255];
+        FILE *file;
+        int   i,j, index;
 
-      /* Print adjoint w to file */
-      sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
-      file = fopen(filename, "w");
-      for (i = 0; i < (app->npoints); i++)
-      {
-         double **w = (app->w);
-         index = (app->ilower) + i +1;
-         fprintf(file, "%05d: ", index);
-         for(j=0; j <mspace; j++)
-         {
-            if(j==mspace-1)
+        sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.w", (app->myid));
+        file = fopen(filename, "w");
+        for (i = 0; i < (app->npoints); i++)
+        {
+            double **w = (app->w);
+            index = (app->ilower) + i +1;
+            fprintf(file, "%05d: ", index);
+            for(j=0; j <mspace; j++)
             {
-               fprintf(file, "% 1.14e", w[i][j]);
+                if(j==mspace-1)
+                {
+                    fprintf(file, "% 1.14e", w[i][j]);
+                }
+                else
+                {
+                    fprintf(file, "% 1.14e, ", w[i][j]);
+                }
+            }
+            fprintf(file, "\n");
+        }
+        fflush(file);
+        fclose(file);
+
+        double *v;
+
+        double **vs = (double **)malloc(app->npoints * sizeof(double*));
+        for(int i = 0; i < app->npoints; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
+
+        /* Compute control v from adjoint w and print to file */
+        sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
+        file = fopen(filename, "w");
+        vec_create((app->mspace), &v);
+        for (i = 0; i < (app->npoints); i++)
+        {
+            double **w = (app->w);
+            vec_copy(mspace, w[i], v);
+            apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
+            apply_Vinv(dt, dx, alpha, mspace,v);
+
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
+            for (j = 0; j < (app->mspace); j++)
+            {
+                vs[i][j] = v[j];
+                if(j==mspace-1)
+                {
+                    fprintf(file, "% 1.14e", v[j]);
+                }
+                else
+                {
+                    fprintf(file, "% 1.14e, ", v[j]);
+                }
+            }
+            fprintf(file, "\n");
+
+        }
+        vec_destroy(v);
+        fflush(file);
+        fclose(file);
+
+
+        char filename1[255];
+        double *us;
+
+        /* Compute state u from adjoint w and print to file */
+        sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
+        file = fopen(filename1, "w");
+        vec_create(mspace, &us);
+        vec_copy(mspace, U0, us);
+        for (j = 0; j < mspace; j++)
+        {
+            if(j!=mspace-1)
+            {
+                fprintf(file, "% 1.14e, ", us[j]);
             }
             else
             {
-               fprintf(file, "% 1.14e, ", w[i][j]);
+                fprintf(file, "% 1.14e", us[j]);
             }
-         }
-         fprintf(file, "\n");
-      }
-      fflush(file);
-      fclose(file);
-   }
+        }
+        vec_destroy(us);
 
-   /* Compute control v from adjoint w and print to file */
-   char    filename[255];
-   FILE   *file;
-   int     i,j;
-   double *v;
+        sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
+        file = fopen(filename, "w");
+        double **u = (double **)malloc(app->npoints * sizeof(double*));
+        for(int i = 0; i < app->npoints; i++) u[i] = (double *)malloc(mspace * sizeof(double));
+        vec_create((app->mspace), &v);
+        for (i = 0; i < (app->npoints); i++)
+        {
+            double **w = (app->w);
+            vec_copy(mspace, w[i], v);
 
-   double **vs = (double **)malloc(app->npoints * sizeof(double*));
-   for(int i = 0; i < app->npoints; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
+            if(i!=app->npoints-1)
+            {
+                vec_copy(mspace, w[i],u[i]);
+                apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+                vec_scale(mspace,-1.0/(dx*dt),u[i]);
+                vec_axpy(mspace,1.0/(dx*dt),w[i+1],u[i]);
+                vec_axpy(mspace,1.0,U0,u[i]);
+            }
+            else
+            {
+                vec_copy(mspace, w[i],u[i]);
+                apply_Aadjoint(dt,dx,nu,mspace,u[i]);
+                vec_scale(mspace,-1.0/(dx*dt),u[i]);
+                vec_axpy(mspace,1.0,U0,u[i]);
+            }
 
-   sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.v", (app->myid));
-   file = fopen(filename, "w");
-   vec_create((app->mspace), &v);
-   for (i = 0; i < (app->npoints); i++)
-   {
-      double **w = (app->w);
-      vec_copy(mspace, w[i], v);
-      apply_DAdjoint(dt, dx, nu, mspace, v, li, ai);
-      apply_Vinv(dt, dx, alpha, mspace,v);
-
-      fprintf(file, "%05d: ", ((app->ilower)+i+1));
-      for (j = 0; j < (app->mspace); j++)
-      {
-         vs[i][j] = v[j];
-         if(j==mspace-1)
-         {
-            fprintf(file, "% 1.14e", v[j]);
-         }
-         else
-         {
-            fprintf(file, "% 1.14e, ", v[j]);
-         }
-      }
-      fprintf(file, "\n");
-   }
-   vec_destroy(v);
-   fflush(file);
-   fclose(file);
-
-   /* Compute state u from adjoint w and print to file */      
-   char filename1[255];
-   double *us;
-   sprintf(filename1, "%s.%03d", "out/advec-diff-imp.out.u0", (app->myid));
-   file = fopen(filename1, "w");
-   vec_create(mspace, &us);
-   vec_copy(mspace, U0, us);
-   for (j = 0; j < mspace; j++)
-   {
-      if(j!=mspace-1)
-      {
-         fprintf(file, "% 1.14e, ", us[j]);
-      }
-      else
-      {
-         fprintf(file, "% 1.14e", us[j]);
-      }
-   }
-   vec_destroy(us);
-
-   sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
-   file = fopen(filename, "w");
-   double **u = (double **)malloc(app->npoints * sizeof(double*));
-   for(int i = 0; i < app->npoints; i++) u[i] = (double *)malloc(mspace * sizeof(double));
-   vec_create((app->mspace), &v);
-   for (i = 0; i < (app->npoints); i++)
-   {
-      double **w = (app->w);
-      vec_copy(mspace, w[i], v);
-      if(i!=app->npoints-1)
-      {
-         vec_copy(mspace, w[i],u[i]);
-         apply_Aadjoint(dt,dx,nu,mspace,u[i]);
-         vec_scale(mspace,-1.0/(dx*dt),u[i]);
-         vec_axpy(mspace,1.0/(dx*dt),w[i+1],u[i]);
-         vec_axpy(mspace,1.0,U0,u[i]);
-      }
-      else
-      {
-         vec_copy(mspace, w[i],u[i]);
-         apply_Aadjoint(dt,dx,nu,mspace,u[i]);
-         vec_scale(mspace,-1.0/(dx*dt),u[i]);
-         vec_axpy(mspace,1.0,U0,u[i]);
-      }
-
-      fprintf(file, "%05d: ", ((app->ilower)+i+1));
-      for (j = 0; j < mspace; j++)
-      {
-         if(j==mspace-1)
-         {
-            fprintf(file, "% 1.14e", u[i][j]);
-         }
-         else
-         {
-            fprintf(file, "% 1.14e, ", u[i][j]);
-         }
-      }
-      fprintf(file, "\n");
-
-      fflush(file);
-      fclose(file);
+            fprintf(file, "%05d: ", ((app->ilower)+i+1));
+            for (j = 0; j < mspace; j++)
+            {
+                if(j==mspace-1)
+                {
+                    fprintf(file, "% 1.14e", u[i][j]);
+                }
+                else
+                {
+                    fprintf(file, "% 1.14e, ", u[i][j]);
+                }
+            }
+            fprintf(file, "\n");
+        }
+        fflush(file);
+        fclose(file);
 
       // Calculates value of objective function
       /*double objective_val=0;
