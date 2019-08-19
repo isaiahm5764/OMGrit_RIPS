@@ -34,7 +34,8 @@
  *                  s.t.  du/dt + u*du/dx - nu d^2u/dx^2 = v(x,t)
  *                        u(0,t)=u(1,t)=0
  *                                  u(x,0)=u0(x)
- *
+ * Visualization: Use the visualization file provided in the /examples folder. 
+ * Run the command python viz.py -help for more info.     
  *                 
  **/
 
