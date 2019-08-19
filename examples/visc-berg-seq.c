@@ -1,3 +1,44 @@
+/*BHEADER**********************************************************************
+ * Written by Isaiah Meyers, Joseph Munar, Eric Neville, Tom Overman
+ * 
+ * This file is part of XBraid. For support, post issues to the XBraid Github page.
+ * 
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License (as published by the Free Software
+ * Foundation) version 2.1 dated February 1999.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
+ * License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc., 59
+ * Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ ***********************************************************************EHEADER*/
+
+ /**
+ * Example:       visc-berg-seq.c
+ *
+ * Interface:     C
+ * 
+ * Requires:      only C-language support     
+ *
+ * Compile with:  make visc-berg-seq
+ *
+ * Description:  Solves the homogeneous uncontrolled Viscous Burger's equation sequentially-in-time:
+
+ *                  du/dt + u*du/dx - nu d^2u/dx^2 = 0
+ *                  u(0,t)=u(1,t)=0
+ *                  u(x,0)=u0(x)
+ *
+ *               The PDE is discretized explicitly. There is no print output to the program so a
+ *               visualization file is provided to view the 3D plot of the solution.
+ * Visualization: Use the visualization file provided in the /examples folder. 
+ * Run the command python viz.py -help for more info.     
+ *                 
+ **/
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -56,6 +97,7 @@ vec_scale(int size, double alpha, double *x)
    }
 }
 
+/* Step a vector of space points corresponding to a point in time forward and return this new vector */
 double
 *my_Step(int ntime, int mspace, double nu, double *u)
 {
@@ -81,7 +123,7 @@ double
 int main (int argc, char *argv[])
 {
 
-   double      dt, dx, nu, tstop, tstart; 
+   double      nu; 
    int         ntime, mspace, arg_index;
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
@@ -89,13 +131,8 @@ int main (int argc, char *argv[])
    ntime = 512;
 
    /* Define some optimization parameters */         /* parameter in the objective function */
-   nu    = 0.7;                /* parameter in PDE */
+   nu    = 0.1;                /* parameter in PDE */
 
-   /* Define some Braid parameters */
-
-      /* Define time domain */
-   tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
 
    /* Parse command line */
    arg_index = 1;
@@ -104,12 +141,6 @@ int main (int argc, char *argv[])
       if ( strcmp(argv[arg_index], "-help") == 0 )
       {
          printf("\n");
-         printf(" Solves the advection-diffusion model problem \n\n");
-         printf("  min  1/2 \\int_0^T\\int_0^1 (u(x,t)-ubar(x))^2 + alpha*v(x,t)^2  dxdt \n\n");
-         printf("  s.t.  u_t + u_x - nu*u_xx = v(x,t) \n");
-         printf("        u(0,t) = u(1,t) = 0 \n\n");
-         printf("        u(x,0) = u0(x) \n");
-         printf("  -tstop <tstop>          : Upper integration limit for time\n");
          printf("  -ntime <ntime>          : Num points in time\n");
          printf("  -mspace <mspace>        : Num points in space\n");
          printf("  -nu <nu>                : Constant Parameter in PDE  \n");
@@ -119,11 +150,6 @@ int main (int argc, char *argv[])
       {
          arg_index++;
          ntime = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-tstop") == 0 )
-      {
-         arg_index++;
-         tstop = atoi(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-mspace") == 0 )
       {
@@ -140,23 +166,6 @@ int main (int argc, char *argv[])
          printf("ABORTING: incorrect command line parameter %s\n", argv[arg_index]);
          return (0);
       }
-   }
-
-
-   /* Define the space step for dt computation */
-   dx=(double)1/(mspace);
-   dt = (tstop-tstart)/(double)ntime;
-
-   //vectors below used for implicit solve employed in my_step
-   double *ai = (double*) malloc( mspace*sizeof(double) );
-   double *li = (double*) malloc( (mspace-1)*sizeof(double) );
-   double A = (-nu*dt / (dx*dx));
-   double B = 1 + 2*nu*dt/(dx*dx);
-   double C = (-nu*dt / (dx*dx));
-   ai[0] = B;
-   for(int i=1; i<mspace; i++){
-      li[i-1] = A/ai[i-1];
-      ai[i] = ai[0]+(-C)*li[i-1];
    }
 
 
