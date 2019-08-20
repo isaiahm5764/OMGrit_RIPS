@@ -19,13 +19,13 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       advec-diff-imp.c
+ * Example:       advec-diff-implicit.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make advec-diff-imp
+ * Compile with:  make advec-diff-implicit
  *
  * Description:  Solves a linear optimal control problem in time-parallel:
  * 
@@ -575,7 +575,6 @@ my_Access(braid_App          app,
 {
    int   done, index, ii;
    int   mspace = (app->mspace);
-   double *U0 = (app->U0);
 
    /* Print solution to file if simulation is over */
    braid_AccessStatusGetDone(astatus, &done);

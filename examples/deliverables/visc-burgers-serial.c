@@ -19,13 +19,13 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       visc-berg-seq.c
+ * Example:       visc-burgers-serial.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make visc-berg-seq
+ * Compile with:  make visc-burgers-serial
  *
  * Description:  Solves the homogeneous uncontrolled Viscous Burger's equation sequentially-in-time:
 

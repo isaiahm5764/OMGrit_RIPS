@@ -19,13 +19,13 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       visc-burgers-newt.c
+ * Example:       visc-burgers-implicit.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make visc-burgers-newt
+ * Compile with:  make visc-burgers-implicit
  *
  * Description:  Solves a nonlinear optimal control problem in time-parallel:
  * 

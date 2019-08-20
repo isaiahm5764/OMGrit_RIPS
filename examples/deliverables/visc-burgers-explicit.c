@@ -19,13 +19,13 @@
  ***********************************************************************EHEADER*/
 
  /**
- * Example:       visc-burgers-exp-rms.c
+ * Example:       visc-burgers-explicit.c
  *
  * Interface:     C
  * 
  * Requires:      only C-language support     
  *
- * Compile with:  make visc-burgers-exp-rms
+ * Compile with:  make visc-burgers-explicit
  *
  * Description:  Solves a nonlinear optimal control problem in time-parallel:
  * 

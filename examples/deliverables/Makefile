@@ -62,7 +62,7 @@ C_EXAMPLES = ex-03 ex-03-serial
 all: $(C_NOHYPRE) $(CPP_NOHYPRE) $(C_EXAMPLES) $(CXX_EXAMPLES)
 
 
-advec-diff-imp: advec-diff-imp.c $(BRAID_LIB_FILE)
+advec-diff-implicit: advec-diff-implicit.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
@@ -74,19 +74,19 @@ advec-diff-upwind: advec-diff-upwind.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
-advec-exp-step-seq: advec-exp-step-seq.c $(BRAID_LIB_FILE)
+advec-diff-serial: advec-diff-serial.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
-visc-berg-seq: visc-berg-seq.c $(BRAID_LIB_FILE)
+visc-burgers-explicit: visc-burgers-explicit.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
-visc-burgers-exp-rms: visc-burgers-exp-rms.c $(BRAID_LIB_FILE)
+visc-burgers-implicit: visc-burgers-implicit.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
-visc-burgers-newt: visc-burgers-newt.c $(BRAID_LIB_FILE)
+visc-burgers-serial: visc-burgers-serial.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 

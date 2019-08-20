@@ -1,3 +1,40 @@
+/*BHEADER**********************************************************************
+ * Written by Isaiah Meyers, Joseph Munar, Eric Neville, Tom Overman
+ * 
+ * This file is part of XBraid. For support, post issues to the XBraid Github page.
+ * 
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License (as published by the Free Software
+ * Foundation) version 2.1 dated February 1999.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
+ * License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc., 59
+ * Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ ***********************************************************************EHEADER*/
+
+ /**
+ * Example:       advec-diff-serial.c
+ *
+ * Interface:     C
+ * 
+ * Requires:      only C-language support     
+ *
+ * Compile with:  make advec-diff-serial
+ *
+ * Description:  Solves a homogenous advection diffusion PDE:
+ * 
+ *                        du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
+ *                        u(0,t)=u(1,t)=0
+ *                        u(x,0)=u0(x)
+ *
+ *                 
+ **/
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -65,7 +102,7 @@ double
 int main (int argc, char *argv[])
 {
 
-   double      dt, dx, nu, tstop, tstart; 
+   double      nu;
    int         ntime, mspace, arg_index;
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
@@ -77,9 +114,7 @@ int main (int argc, char *argv[])
 
    /* Define some Braid parameters */
 
-      /* Define time domain */
-   tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
+
 
    /* Parse command line */
    arg_index = 1;
@@ -93,7 +128,6 @@ int main (int argc, char *argv[])
          printf("  s.t.  u_t + u_x - nu*u_xx = v(x,t) \n");
          printf("        u(0,t) = u(1,t) = 0 \n\n");
          printf("        u(x,0) = u0(x) \n");
-         printf("  -tstop <tstop>          : Upper integration limit for time\n");
          printf("  -ntime <ntime>          : Num points in time\n");
          printf("  -mspace <mspace>        : Num points in space\n");
          printf("  -nu <nu>                : Constant Parameter in PDE  \n");
@@ -103,11 +137,6 @@ int main (int argc, char *argv[])
       {
          arg_index++;
          ntime = atoi(argv[arg_index++]);
-      }
-      else if ( strcmp(argv[arg_index], "-tstop") == 0 )
-      {
-         arg_index++;
-         tstop = atoi(argv[arg_index++]);
       }
       else if ( strcmp(argv[arg_index], "-mspace") == 0 )
       {
@@ -126,10 +155,6 @@ int main (int argc, char *argv[])
       }
    }
 
-
-   /* Define the space step for dt computation */
-   dx=(double)1/(mspace);
-   dt = (tstop-tstart)/(double)ntime;
 
    double **w = (double **)malloc(ntime * sizeof(double*));
    for(int i = 0; i < ntime; i++) w[i] = (double *)malloc(mspace * sizeof(double));
