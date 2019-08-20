@@ -2,7 +2,7 @@ from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
 #get nsteps for time from the u file
-with open('advec-exp-step.out.u.000') as f:
+with open('visc-berg-seq.out.u.000') as f:
         lines = f.readlines()
 for line in lines:
     line = line[6:]
@@ -11,20 +11,21 @@ mspace=len(split)
 nsteps=len(lines)
 #create the t mesh
 tmesh = linspace(0,1.0,nsteps)
-xmesh = linspace(0,1.0,mspace)
+xmesh = linspace(0,1.0,mspace+1)
 ##
 current_rank = 0
-state_vec = empty([nsteps, mspace])
+state_vec = empty([nsteps, mspace+1])
 
-with open('advec-exp-step.out.u.000') as f:
+with open('visc-berg-seq.out.u.000') as f:
     lines = f.readlines()
 count = 0
 for line in lines:
     line = line[6:]
     split = line.split(',')
-    count2 = 0
+    count2 = 1
+    state_vec[count,0] = 0
     for thing in split:
-        state_vec[count,count2] = float(split[count2])
+        state_vec[count,count2] = float(split[count2-1])
         count2+=1
     count+=1
 
