@@ -1,6 +1,3 @@
-#Code below is used to visualize the direct PDE solves for viscous burgers and advection diffusion PDEs
-#as solved in advec-diff-serial and visc-burgers-serial
-
 from scipy import *
 from matplotlib import pyplot as mpl
 from os import sys
@@ -32,6 +29,27 @@ for line in lines:
         count2+=1
     count+=1
 
+# mpl.figure(1)
+# for x in range(0,mspace-1):
+#     mpl.plot(tmesh[1:], state_vec[:,x], '-b')
+# mpl.ylabel('U')
+# mpl.xlabel('time')
+# mpl.title('Solution Values')
+
+# mpl.figure(2)
+# for x in range(0,mspace-1):
+#     mpl.plot(tmesh[1:], w_vec[:,x], '-b')
+# mpl.ylabel('W')
+# mpl.xlabel('time')
+# mpl.title('Solution Values')
+
+# mpl.figure(3)
+# for x in range(0,mspace-1):
+#     mpl.plot(tmesh[1:], v_vec[:,x], '-b')
+# mpl.ylabel('V')
+# mpl.xlabel('time')
+# mpl.title('Solution Values')
+# mpl.show()
 
 import numpy
 import matplotlib.pyplot as plt
