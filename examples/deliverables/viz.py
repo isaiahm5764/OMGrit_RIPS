@@ -38,19 +38,13 @@ def retrieve_data(file_stem, var, vec, step):
 def plot_data(title, fig_num, vec, xmesh, tmesh):
     """
     Visualizes solution data
-<<<<<<< HEAD
-=======
-
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
+    
     Input: title, string containing title of plot.
     fig_num, (fig_num)th figure being generated.
     vec, 2D list containing solution to problem.
     xmesh, spatial mesh to plot solution on.
     tmesh, temporal mesh to plot solution on.
-<<<<<<< HEAD
-=======
 
->>>>>>> 9ac45b6a11995941364c49a6d850c203c11cf2c8
     Output: None
     """
     hf = plt.figure(fig_num)
