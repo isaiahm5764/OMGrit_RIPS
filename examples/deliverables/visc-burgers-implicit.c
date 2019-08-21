@@ -33,7 +33,7 @@
  * 
  *                  s.t.  du/dt + u*du/dx - nu d^2u/dx^2 = v(x,t)
  *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
+ *                        u(x,0)=u0(x)
  *
  * Visualization: Use the visualization file provided in the /examples folder. 
  * Run the command python viz.py -help for more info.           
@@ -408,6 +408,7 @@ apply_B_transpose(double dt, int mspace, double nu, double *u, double *uleft){
   u[mspace-1] = -uleft[mspace-1] * tmp[mspace-2] + -uleft[mspace-2] * tmp[mspace-1];
 }
 
+//Find the nonlinear vector gamma for a specific u value
 void 
 find_gamma(double *u, int mspace){
   double *tmp;
