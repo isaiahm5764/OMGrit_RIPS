@@ -29,7 +29,7 @@
  *
  * Description:  Solves a homogenous advection diffusion PDE:
  * 
- *                        du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
+ *                        du/dt + du/dx - nu d^2u/dx^2 = 0.0
  *                        u(0,t)=u(1,t)=0
  *                        u(x,0)=u0(x)
  *
@@ -124,10 +124,9 @@ int main (int argc, char *argv[])
       {
          printf("\n");
          printf(" Solves the advection-diffusion model problem \n\n");
-         printf("  min  1/2 \\int_0^T\\int_0^1 (u(x,t)-ubar(x))^2 + alpha*v(x,t)^2  dxdt \n\n");
-         printf("  s.t.  u_t + u_x - nu*u_xx = v(x,t) \n");
-         printf("        u(0,t) = u(1,t) = 0 \n\n");
-         printf("        u(x,0) = u0(x) \n");
+         printf("  u_t + u_x - nu*u_xx = 0.0 \n");
+         printf("  u(0,t) = u(1,t) = 0 \n\n");
+         printf("  u(x,0) = u0(x) \n");
          printf("  -ntime <ntime>          : Num points in time\n");
          printf("  -mspace <mspace>        : Num points in space\n");
          printf("  -nu <nu>                : Constant Parameter in PDE  \n");
