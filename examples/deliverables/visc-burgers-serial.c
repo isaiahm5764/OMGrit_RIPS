@@ -49,8 +49,6 @@
  * User-defined routines and structures
  *--------------------------------------------------------------------------*/
 
-/* App structure can contain anything, and be named anything as well */
-
 /* Vector structure can contain anything, and be name anything as well */
 
 void
