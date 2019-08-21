@@ -721,10 +721,10 @@ main(int argc, char *argv[])
 
     /* Define some optimization parameters */
     alpha = .005;            /* parameter in the objective function */
-    nu    = 2;               /* parameter in PDE */
+    nu    = .3;               /* parameter in PDE */
 
     /* Define some Braid parameters */
-    max_levels     = 30;
+    max_levels     = 2;
     min_coarse     = 1;
     nrelax         = 1;
     nrelaxc        = 30;

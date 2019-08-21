@@ -106,11 +106,11 @@ int main (int argc, char *argv[])
    int         ntime, mspace, arg_index;
 
    /* Define space domain. Space domain is between 0 and 1, mspace defines the number of steps */
-   mspace = 16;
-   ntime = 512;
+   mspace = 32;
+   ntime = 1024;
 
    /* Define some optimization parameters */         /* parameter in the objective function */
-   nu    = 0.7;                /* parameter in PDE */
+   nu    = 0.1;                /* parameter in PDE */
 
    /* Define some Braid parameters */
 
@@ -185,7 +185,7 @@ int main (int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "advec-imp-step-seq.out.u", 000);
+         sprintf(filename, "%s.%03d", "advec-diff-serial.out.u", 000);
          file = fopen(filename, "w");
          for (i = 0; i < ntime; i++)
          {

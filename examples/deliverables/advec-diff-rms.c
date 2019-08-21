@@ -35,7 +35,7 @@
  *                        u(0,t)=u(1,t)=0
  *                                  u(x,0)=u0(x)
  *
- *                 
+ * NOTE:         There is still some strange behavior with convering to a low residual. It seems to stall.                 
  **/
 
 #include <stdlib.h>
@@ -802,10 +802,10 @@ main(int argc, char *argv[])
 
   /* Define some optimization parameters */
   alpha = .005;            /* parameter in the objective function */
-  nu    = 2;               /* parameter in PDE */
+  nu    = .3;               /* parameter in PDE */
 
   /* Define some Braid parameters */
-  max_levels     = 30;
+  max_levels     = 2;
   min_coarse     = 1;
   nrelax         = 1;
   nrelaxc        = 30;

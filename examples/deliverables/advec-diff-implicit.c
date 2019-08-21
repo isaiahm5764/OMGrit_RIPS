@@ -717,10 +717,10 @@ main(int argc, char *argv[])
 
    /* Define some optimization parameters */
    alpha = .005;            /* parameter in the objective function */
-   nu    = 2;               /* parameter in PDE */
+   nu    = .3;               /* parameter in PDE */
 
    /* Define some Braid parameters */
-   max_levels     = 30;
+   max_levels     = 3;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 30;
@@ -990,6 +990,8 @@ main(int argc, char *argv[])
         }
         vec_destroy(us);
 
+
+        //Calculate U from W and print out to file
         sprintf(filename, "%s.%03d", "out/advec-diff-imp.out.u", (app->myid));
         file = fopen(filename, "w");
         double **u = (double **)malloc(app->npoints * sizeof(double*));
@@ -1049,7 +1051,7 @@ main(int argc, char *argv[])
       
    }
 
-   /* Print runtime to file */
+   /* Print runtime to file (for runtime comparisons)*/
    time = (double)(end-start)/CLOCKS_PER_SEC;
    printf("Total Run Time: %f s \n", time);
    {
