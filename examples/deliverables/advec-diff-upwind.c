@@ -33,7 +33,7 @@
  * 
  *                  s.t.  du/dt + du/dx - nu d^2u/dx^2 = v(x,t)
  *                        u(0,t)=u(1,t)=0
- *                                  u(x,0)=u0(x)
+ *                        u(x,0)=u0(x)
  *
  *                 
  **/
@@ -1060,7 +1060,7 @@ main(int argc, char *argv[])
         char    filename[255];
         FILE   *file;
 
-        sprintf(filename, "%s.%d.%d", "out/advec-diff-upwind.time", ntime, 8);
+        sprintf(filename, "%s.%d", "out/advec-diff-upwind.time", ntime);
 
         file = fopen(filename, "w");
         fprintf(file, "%f", time);
