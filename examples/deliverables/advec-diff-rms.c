@@ -77,7 +77,7 @@ typedef struct _braid_App_struct
 /* Define the state vector at one time-step */
 typedef struct _braid_Vector_struct
 {
-  double **values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) for ui vi and wi*/
+  double **values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) for ui vi and wi. Index 0 corresponds to u, 1 to v, 2 to w, and 3 to u^i-1.*/
 } my_Vector;
 
 /*--------------------------------------------------------------------------
@@ -232,25 +232,6 @@ apply_Aadjoint(double dt, double dx, double nu, int M, double *u)
 
 /*------------------------------------*/
 
-void
-apply_Uinv(double dt, double dx, int M, double *u)
-{
-  for (int i = 0; i <= M-1; i++)
-  {
-    u[i] /= dx*dt;
-  }
-}
-
-/*------------------------------------*/
-
-void
-apply_Vinv(double dt, double dx, double alpha, int M, double *v)
-{
-  for (int i = 0; i <= M-1; i++)
-  {
-    v[i] /= alpha*dx*dt;
-  }   
-}
 
 /*------------------------------------*/
 
@@ -264,15 +245,6 @@ apply_D(double dt, double dx, double nu, int M, double *v)
 }
 
 /*------------------------------------*/
-
-void
-apply_DAdjoint(double dt, double dx, double nu, int M, double *v)
-{
-  for (int i = 0; i <= M-1; i++)
-  {
-    v[i] *= dt;
-  }
-}
 
 /*------------------------------------*/
 

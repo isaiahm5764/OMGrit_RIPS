@@ -78,7 +78,7 @@ typedef struct _braid_App_struct
 /* Define the state vector at one time-step */
 typedef struct _braid_Vector_struct
 {
-  double **values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) for ui vi and wi*/
+  double **values;     /* Holds the R^M state vector (u_1, u_2,...,u_M) for ui vi and wi. Index 0 corresponds to u, 1 to v, and 2 to w.*/
 } my_Vector;
 
 /*--------------------------------------------------------------------------
@@ -174,121 +174,6 @@ apply_B_inverse(double dt, double dx, double nu, int M, double *u, double *r)
   free(g);
 }
 
-/* Applies inverse of (dx*dt - gamma*C^n) */
-
-void
-apply_C_inverse(double dt, double dx, double nu, int M, double *u, double *r)
-{  
-  /* Find LU decomposition */
-  double *ai = (double*) malloc( M*sizeof(double) );
-  double *li = (double*) malloc( (M-1)*sizeof(double) );
-  double *bi = (double*) malloc( (M-1)*sizeof(double) );
-  double l = dt/(4*dx);
-   
-  ai[0] = dx*dt;
-  for(int i=1; i<M-1; i++)
-  {
-    bi[i-1] = -l*(u[i-1]-u[i]);
-    li[i-1] = -l*(u[i-1]-u[i])/ai[i-1];
-    ai[i] = dx*dt+l*l*(u[i-1]-u[i])*(u[i-1]-u[i])/ai[i-1];
-  }
-
-
-  /* Solve Lw=u (Lw=f) */
-  double *w;
-  vec_create(M, &w);
-  double *f;
-  vec_create(M, &f);
-  vec_copy(M, r, f);
-  w[0]=f[0];
-  for (int i = 1; i < M; i++)
-  {
-    w[i]=f[i]-li[i-1]*w[i-1];
-  }
-
-  /* Now solve Ux=w */ 
-  r[M-1]=w[M-1]/ai[M-1];
-  for (int i = M-2; i >= 0; i--)
-  {
-    r[i]=(w[i]-bi[i]*r[i+1])/ai[i];      
-  }
-
-  vec_destroy(w);
-  vec_destroy(f);
-  free(ai);
-  free(li);
-  free(bi);
-}
-
-/* Applies H^n which is dxdtI - lambda*C^n */
-void
-apply_C(double dt, double dx, double nu, int M, double *w, double *r)
-{  
-  double *rold;
-  vec_create(M, &rold);
-  vec_copy(M, r, rold);
-  double l = dt/(4*dx);
-  r[0]=(dx*dt - l*(2*w[0])) * rold[0];
-  r[M-1]= (dx*dt - l*(-2*w[M-2])) * rold[M-1];
-  for(int i = 1; i <= M-2; i++)
-  {
-    r[i]=  (dx*dt - l*(-2*w[i-1] +2*w[i+1])) * rold[i];
-  }
-  vec_destroy(rold);
-}
-
-/* This is the application of A inverse*/
-
-void
-apply_Phi(double dt, double dx, double nu, int M, double *u, double *l, double *a)
-{   
-  /* First solve Lw=u (Lw=f) */
-  double *w;
-  vec_create(M, &w);
-  double *f;
-  vec_create(M, &f);
-  vec_copy(M, u, f);
-  w[0]=f[0];
-  for (int i = 1; i < M; i++)
-  {
-    w[i]=f[i]-l[i-1]*w[i-1];
-  }
-
-  /* Now solve Ux=w */ 
-  double b = b(dt, dx, nu);
-  u[M-1]=w[M-1]/a[M-1];
-  for (int i = M-2; i >= 0; i--)
-  {
-    u[i]=(w[i]-b*u[i+1])/a[i];      
-  }
-}
-
-/*This is the application of A inverse transpose*/
-
-void
-apply_PhiAdjoint(double dt, double dx, double nu, int M, double *u, double *l, double *a)
-{
-  /* First solve U^Tw=u (U^Tw=f) */
-  double *w;
-
-  vec_create(M, &w);
-  double *f;
-  vec_create(M, &f);
-  vec_copy(M, u, f);
-  double b = b(dt, dx, nu);
-  w[0]=f[0]/a[0];
-  for (int i = 1; i < M; i++)
-  {
-    w[i]=(f[i]-w[i-1]*b)/a[i];
-  }
-
-  /* Now solve L^Tx=w */ 
-  u[M-1]=w[M-1];
-  for (int i = M-2; i >= 0; i--)
-  {
-    u[i]=w[i]-l[i]*u[i+1];      
-  }
-}
 
 /*------------------------------------*/
 
