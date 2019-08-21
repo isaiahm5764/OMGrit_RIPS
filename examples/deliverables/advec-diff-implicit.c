@@ -1058,9 +1058,8 @@ main(int argc, char *argv[])
       char    filename[255];
       FILE   *file;
       
-      //Note that the time out file also writes the number of processors to the file name
-      //So in this instance the '8' denotes we ran the simulation on 8 processors
-      sprintf(filename, "%s.%d.%d", "out/advec-diff-imp.time", ntime, 8);
+      //Note that this out file appends the number of time steps
+      sprintf(filename, "%s.%d", "out/advec-diff-imp.time", ntime);
 
       file = fopen(filename, "w");
       fprintf(file, "%f", time);
