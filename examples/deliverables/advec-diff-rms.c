@@ -364,7 +364,6 @@ my_TriResidual(braid_App       app,
 
   else
   {
-    /* NEEDS TO BE DEALT WITH */  
     vec_scale(mspace,0.0,utmp);
   }
 
