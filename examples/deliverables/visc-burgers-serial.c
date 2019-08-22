@@ -128,9 +128,8 @@ int main (int argc, char *argv[])
    mspace = 16;
    ntime = 512;
 
-   /* Define some optimization parameters */         /* parameter in the objective function */
-   nu    = 0.1;                /* parameter in PDE */
-
+   /* parameter in PDE */
+   nu    = 0.1;
 
    /* Parse command line */
    arg_index = 1;
@@ -196,7 +195,7 @@ int main (int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "visc-burgers-serial.out.u", 000);
+         sprintf(filename, "%s.%03d", "out/visc-burgers-serial.out.u", 000);
          file = fopen(filename, "w");
          for (i = 0; i < ntime; i++)
          {

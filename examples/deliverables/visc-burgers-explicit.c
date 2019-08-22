@@ -771,9 +771,9 @@ main(int argc, char *argv[])
     if ( strcmp(argv[arg_index], "-help") == 0 )
     {
       printf("\n");
-      printf(" Solves the advection-diffusion model problem \n\n");
+      printf(" Solves the viscous-burgers model problem \n\n");
       printf("  min  1/2 \\int_0^T\\int_0^1 (u(x,t)-ubar(x))^2 + alpha*v(x,t)^2  dxdt \n\n");
-      printf("  s.t.  u_t + u_x - nu*u_xx = v(x,t) \n");
+      printf("  s.t.  u_t + u*u_x - nu*u_xx = v(x,t) \n");
       printf("        u(0,t) = u(1,t) = 0 \n\n");
       printf("        u(x,0) = u0(x) \n");
       printf("  -tstop <tstop>          : Upper integration limit for time\n");
@@ -944,7 +944,7 @@ main(int argc, char *argv[])
 
    char    filename[255];
    FILE   *file;
-   sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-exp-rms.conv", ntime,mspace,nu,alpha,max_levels);
+   sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-explicit.conv", ntime,mspace,nu,alpha,max_levels);
    file = fopen(filename, "w");
    fprintf(file, "%f", check);
    fflush(file);
@@ -963,7 +963,7 @@ main(int argc, char *argv[])
     int   i,j,index;
 
     /* Compute state u from adjoint w and print to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-exp-rms.out.u", (app->myid));
+    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.u", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -988,7 +988,7 @@ main(int argc, char *argv[])
     char filename1[255]; 
     double *us;
 
-    sprintf(filename1, "%s.%03d", "out/visc-burgers-exp-rms.out.u0", (app->myid));
+    sprintf(filename1, "%s.%03d", "out/visc-burgers-explicit.out.u0", (app->myid));
     file = fopen(filename1, "w");
     vec_create(mspace, &us);
     vec_copy(mspace, U0, us);
@@ -1006,7 +1006,7 @@ main(int argc, char *argv[])
     vec_destroy(us);
 
     /* Compute control v from adjoint w and print to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-exp-rms.out.v", (app->myid));
+    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.v", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -1030,7 +1030,7 @@ main(int argc, char *argv[])
     fclose(file);
 
     /* Print adjoint w to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-exp-rms.out.w", (app->myid));
+    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.w", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -1060,7 +1060,7 @@ main(int argc, char *argv[])
   {
     char    filename[255];
     FILE   *file;
-    sprintf(filename, "%s.%d", "out/visc-burgers-exp-rms.time", ntime);
+    sprintf(filename, "%s.%d", "out/visc-burgers-explicit.time", ntime);
     file = fopen(filename, "w");
     fprintf(file, "%f", time);
     fflush(file);

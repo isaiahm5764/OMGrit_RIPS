@@ -26,10 +26,6 @@ def retrieve_data(file_stem, var, vec, step):
             line = line[6:]
             split = line.split(',')
             count = 0
-            if var == "u":
-                vec[index,0] = left_bound
-                vec[index,mspace+1] = right_bound
-                count = 1
             for val in split:
                 vec[index,count] = float(val)
                 count += 1
@@ -40,11 +36,13 @@ def retrieve_data(file_stem, var, vec, step):
 def plot_data(title, fig_num, vec, xmesh, tmesh):
     """
     Visualizes solution data
+
     Input: title, string containing title of plot.
     fig_num, (fig_num)th figure being generated.
     vec, 2D list containing solution to problem.
     xmesh, spatial mesh to plot solution on.
     tmesh, temporal mesh to plot solution on.
+    
     Output: None
     """
     hf = plt.figure(fig_num)
@@ -72,55 +70,59 @@ nsteps = None # added later if user does not define
 
 # User input
 arg_index = 1
-while arg_index < len(sys.argv):
     if sys.argv[arg_index] == "-help":
-        print " Viz.py plots state, control, and adjoint solutions to time and 1D space dependent optimization problem \n\n"
-        print "  -file_stem <file_stem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
-        print "  -nsteps <nsteps>          : Num points in time\n"
-        print "  -start_t <start_t>        : Initial time point\n"
-        print "  -end_t <end_t>            : Final time point\n"
-        print "  -start_x <start_x>        : Initial space point\n"
-        print "  -end_x <end_x>            : Final space point\n"
-        print "  -l_bound  <l_bound>       : Value of initial space point at all times\n"
-        print "  -r_bound <r_bound>        : Value of final space point at all times\n"
+        print " Viz-serial.py plots state solutions to time and 1D space discretized system \n\n"
+        print "  -filestem <filestem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
+        print "  -ntime <ntime>          : Num points in time\n"
+        print "  -tstart <tstart>        : Initial time point\n"
+        print "  -tstop <tstop>          : Final time point\n"
+        print "  -xstart <xstart>        : Initial space point\n"
+        print "  -xend <xend>            : Final space point\n"
+        print "  -lbound  <lbound>       : Value of initial space point at all times\n"
+        print "  -rbound <rbound>        : Value of final space point at all times\n"
         exit()
 
-    elif sys.argv[arg_index] == "-file_stem":
+    elif sys.argv[arg_index] == "-filestem":
         arg_index += 1
         file_stem = sys.argv[arg_index]
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-nsteps":
+    elif sys.argv[arg_index] == "-np":
+        arg_index += 1
+        num_procs = int(sys.argv[arg_index])
+        arg_index += 1
+
+    elif sys.argv[arg_index] == "-ntime":
         arg_index += 1
         nsteps = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-start_t":
+    elif sys.argv[arg_index] == "-tstart":
         arg_index += 1
         start_t = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-end_t":
+    elif sys.argv[arg_index] == "-tstop":
         arg_index += 1
         end_t = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-start_x":
+    elif sys.argv[arg_index] == "-xstart":
         arg_index += 1
         start_x = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-end_x":
+    elif sys.argv[arg_index] == "-xend":
         arg_index += 1
         end_x = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-l_bound":
+    elif sys.argv[arg_index] == "-lbound":
         arg_index += 1
         left_bound = int(sys.argv[arg_index])
         arg_index += 1
 
-    elif sys.argv[arg_index] == "-r_bound":
+    elif sys.argv[arg_index] == "-rbound":
         arg_index += 1
         right_bound = int(sys.argv[arg_index])
         arg_index += 1
@@ -142,13 +144,13 @@ if nsteps == None: # estimate nsteps if user did not define
 
 
 # Create the time and space meshes
-tmesh_state = linspace(start_t,end_t,nsteps+1)
-xmesh_state = linspace(start_x,end_x,mspace+2)
+tmesh_state = linspace(start_t,end_t,nsteps)
+xmesh_state = linspace(start_x,end_x,mspace)
 
 # Initialize solution vectors
-state_vec = zeros([nsteps+1, mspace+2])
+state_vec = zeros([nsteps, mspace])
 
-# Retrieves solutions of u, v, and w for each processor
+# Retrieves solutions of u for each processor
 state_vec = retrieve_data(file_stem, 'u', state_vec, 0)
 
 import numpy
