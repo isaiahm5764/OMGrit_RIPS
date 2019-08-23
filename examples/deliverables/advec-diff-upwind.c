@@ -913,7 +913,7 @@ main(int argc, char *argv[])
         FILE *file;
         int   i,j, index;
 
-        sprintf(filename, "%s.%03d", "out/advec-diff-upwind.out.w", (app->myid));
+        sprintf(filename, "%s.%03d", "advec-diff-upwind.out.w", (app->myid));
         file = fopen(filename, "w");
         for (i = 0; i < (app->npoints); i++)
         {
@@ -942,7 +942,7 @@ main(int argc, char *argv[])
         for(int i = 0; i < app->npoints; i++) vs[i] = (double *)malloc(mspace * sizeof(double));
 
         /* Compute control v from adjoint w and print to file */
-        sprintf(filename, "%s.%03d", "out/advec-diff-upwind.out.v", (app->myid));
+        sprintf(filename, "%s.%03d", "advec-diff-upwind.out.v", (app->myid));
         file = fopen(filename, "w");
         vec_create((app->mspace), &v);
         for (i = 0; i < (app->npoints); i++)
@@ -977,7 +977,7 @@ main(int argc, char *argv[])
         double *us;
 
         /* Compute state u from adjoint w and print to file */
-        sprintf(filename1, "%s.%03d", "out/advec-diff-upwind.out.u0", (app->myid));
+        sprintf(filename1, "%s.%03d", "advec-diff-upwind.out.u0", (app->myid));
         file = fopen(filename1, "w");
         vec_create(mspace, &us);
         vec_copy(mspace, U0, us);
@@ -994,7 +994,7 @@ main(int argc, char *argv[])
         }
         vec_destroy(us);
 
-        sprintf(filename, "%s.%03d", "out/advec-diff-upwind.out.u", (app->myid));
+        sprintf(filename, "%s.%03d", "advec-diff-upwind.out.u", (app->myid));
         file = fopen(filename, "w");
         double **u = (double **)malloc(app->npoints * sizeof(double*));
         for(int i = 0; i < app->npoints; i++) u[i] = (double *)malloc(mspace * sizeof(double));
@@ -1060,7 +1060,7 @@ main(int argc, char *argv[])
         char    filename[255];
         FILE   *file;
 
-        sprintf(filename, "%s.%d", "out/advec-diff-upwind.time", ntime);
+        sprintf(filename, "%s.%d", "advec-diff-upwind.time", ntime);
 
         file = fopen(filename, "w");
         fprintf(file, "%f", time);

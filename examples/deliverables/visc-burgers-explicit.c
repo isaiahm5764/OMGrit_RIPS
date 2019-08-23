@@ -944,7 +944,7 @@ main(int argc, char *argv[])
 
    char    filename[255];
    FILE   *file;
-   sprintf(filename, "%s.%d.%d.%f.%f.%d", "out/visc-burgers-explicit.conv", ntime,mspace,nu,alpha,max_levels);
+   sprintf(filename, "%s.%d.%d.%f.%f.%d", "visc-burgers-explicit.conv", ntime,mspace,nu,alpha,max_levels);
    file = fopen(filename, "w");
    fprintf(file, "%f", check);
    fflush(file);
@@ -963,7 +963,7 @@ main(int argc, char *argv[])
     int   i,j,index;
 
     /* Compute state u from adjoint w and print to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.u", (app->myid));
+    sprintf(filename, "%s.%03d", "visc-burgers-explicit.out.u", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -988,7 +988,7 @@ main(int argc, char *argv[])
     char filename1[255]; 
     double *us;
 
-    sprintf(filename1, "%s.%03d", "out/visc-burgers-explicit.out.u0", (app->myid));
+    sprintf(filename1, "%s.%03d", "visc-burgers-explicit.out.u0", (app->myid));
     file = fopen(filename1, "w");
     vec_create(mspace, &us);
     vec_copy(mspace, U0, us);
@@ -1006,7 +1006,7 @@ main(int argc, char *argv[])
     vec_destroy(us);
 
     /* Compute control v from adjoint w and print to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.v", (app->myid));
+    sprintf(filename, "%s.%03d", "visc-burgers-explicit.out.v", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -1030,7 +1030,7 @@ main(int argc, char *argv[])
     fclose(file);
 
     /* Print adjoint w to file */
-    sprintf(filename, "%s.%03d", "out/visc-burgers-explicit.out.w", (app->myid));
+    sprintf(filename, "%s.%03d", "visc-burgers-explicit.out.w", (app->myid));
     file = fopen(filename, "w");
     for (i = 0; i < (app->npoints); i++)
     {
@@ -1060,7 +1060,7 @@ main(int argc, char *argv[])
   {
     char    filename[255];
     FILE   *file;
-    sprintf(filename, "%s.%d", "out/visc-burgers-explicit.time", ntime);
+    sprintf(filename, "%s.%d", "visc-burgers-explicit.time", ntime);
     file = fopen(filename, "w");
     fprintf(file, "%f", time);
     fflush(file);

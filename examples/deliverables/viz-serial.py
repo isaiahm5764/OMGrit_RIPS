@@ -70,65 +70,65 @@ nsteps = None # added later if user does not define
 
 # User input
 arg_index = 1
-    if sys.argv[arg_index] == "-help":
-        print " Viz-serial.py plots state solutions to time and 1D space discretized system \n\n"
-        print "  -filestem <filestem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
-        print "  -ntime <ntime>          : Num points in time\n"
-        print "  -tstart <tstart>        : Initial time point\n"
-        print "  -tstop <tstop>          : Final time point\n"
-        print "  -xstart <xstart>        : Initial space point\n"
-        print "  -xend <xend>            : Final space point\n"
-        print "  -lbound  <lbound>       : Value of initial space point at all times\n"
-        print "  -rbound <rbound>        : Value of final space point at all times\n"
-        exit()
+if sys.argv[arg_index] == "-help":
+    print " Viz-serial.py plots state solutions to time and 1D space discretized system \n\n"
+    print "  -filestem <filestem>    : Folder/file location of data (e.g. out/optimize.sol.)\n"
+    print "  -ntime <ntime>          : Num points in time\n"
+    print "  -tstart <tstart>        : Initial time point\n"
+    print "  -tstop <tstop>          : Final time point\n"
+    print "  -xstart <xstart>        : Initial space point\n"
+    print "  -xend <xend>            : Final space point\n"
+    print "  -lbound  <lbound>       : Value of initial space point at all times\n"
+    print "  -rbound <rbound>        : Value of final space point at all times\n"
+    exit()
 
-    elif sys.argv[arg_index] == "-filestem":
-        arg_index += 1
-        file_stem = sys.argv[arg_index]
-        arg_index += 1
+elif sys.argv[arg_index] == "-filestem":
+    arg_index += 1
+    file_stem = sys.argv[arg_index]
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-np":
-        arg_index += 1
-        num_procs = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-np":
+    arg_index += 1
+    num_procs = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-ntime":
-        arg_index += 1
-        nsteps = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-ntime":
+    arg_index += 1
+    nsteps = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-tstart":
-        arg_index += 1
-        start_t = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-tstart":
+    arg_index += 1
+    start_t = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-tstop":
-        arg_index += 1
-        end_t = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-tstop":
+    arg_index += 1
+    end_t = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-xstart":
-        arg_index += 1
-        start_x = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-xstart":
+    arg_index += 1
+    start_x = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-xend":
-        arg_index += 1
-        end_x = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-xend":
+    arg_index += 1
+    end_x = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-lbound":
-        arg_index += 1
-        left_bound = int(sys.argv[arg_index])
-        arg_index += 1
+elif sys.argv[arg_index] == "-lbound":
+    arg_index += 1
+    left_bound = int(sys.argv[arg_index])
+    arg_index += 1
 
-    elif sys.argv[arg_index] == "-rbound":
-        arg_index += 1
-        right_bound = int(sys.argv[arg_index])
-        arg_index += 1
-    else:
-        print "ABORTING: incorrect command line parameter " + str(sys.argv[arg_index])
-        exit()
+elif sys.argv[arg_index] == "-rbound":
+    arg_index += 1
+    right_bound = int(sys.argv[arg_index])
+    arg_index += 1
+else:
+    print "ABORTING: incorrect command line parameter " + str(sys.argv[arg_index])
+    exit()
 
 
 ###### Vizualization Code ######

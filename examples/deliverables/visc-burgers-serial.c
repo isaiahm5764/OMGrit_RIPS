@@ -195,7 +195,7 @@ int main (int argc, char *argv[])
          FILE *file;
          int   i,j;
 
-         sprintf(filename, "%s.%03d", "out/visc-burgers-serial.out.u", 000);
+         sprintf(filename, "%s.%03d", "visc-burgers-serial.out.u", 000);
          file = fopen(filename, "w");
          for (i = 0; i < ntime; i++)
          {
