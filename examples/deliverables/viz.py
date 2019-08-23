@@ -60,7 +60,7 @@ def plot_data(title, fig_num, vec, xmesh, tmesh):
 
 ###### Input ######
 # Default input
-file_stem = "out/advec-diff-imp.out."
+file_stem = "out/advec-diff-implicit.out."
 num_procs = 1
 start_t = 0
 end_t = 1
@@ -144,7 +144,7 @@ for line in lines:
 mspace=len(split)
 if nsteps == None: # estimate nsteps if user did not define
     nsteps=len(lines)*num_procs
-
+print nsteps, mspace
 
 # Create the time and space meshes
 tmesh = linspace(start_t,end_t,nsteps)
@@ -156,7 +156,8 @@ xmesh_state = linspace(start_x,end_x,mspace+2)
 state_vec = zeros([nsteps+1, mspace+2])
 adjoint_vec = zeros([nsteps, mspace])
 control_vec = zeros([nsteps, mspace])
-
+print len(state_vec), len(state_vec[0])
+print state_vec
 # Retreives initial values of u
 with open(file_stem + 'u0.000') as f:
     lines = f.readlines()
